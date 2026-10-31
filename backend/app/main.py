@@ -15,7 +15,9 @@ from app.routers import (
     subscriptions,
     revenue,
     distribution,
-    evidence
+    evidence,
+    deliveries,
+    notifications
 )
 
 app = FastAPI(
@@ -53,6 +55,8 @@ app.include_router(subscriptions.router)
 app.include_router(revenue.router)
 app.include_router(distribution.router)
 app.include_router(evidence.router)
+app.include_router(deliveries.router)
+app.include_router(notifications.router)
 
 @app.get("/", tags=["Health Check"])
 def root():

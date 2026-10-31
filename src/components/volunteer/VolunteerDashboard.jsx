@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageHeader from '../ui/PageHeader';
 import StatCard from '../ui/StatCard';
 import UrgencyBanner from '../ui/UrgencyBanner';
 import StatusBadge from '../ui/StatusBadge';
 import CameraEvidenceModal from '../evidence/CameraEvidenceModal';
+import CourierRouteMap from './CourierRouteMap';
 import { 
   Truck, 
   MapPin, 
@@ -18,9 +19,12 @@ import {
   RotateCcw,
   Navigation,
   Check,
-  X
+  X,
+  Share2,
+  Compass,
+  AlertCircle
 } from 'lucide-react';
-import { createWhatsAppLink } from '../../utils/whatsapp';
+import { createWhatsAppLink, WhatsAppLifecycle } from '../../utils/whatsapp';
 
 export default function VolunteerDashboard({
   volunteerUser,
@@ -30,16 +34,17 @@ export default function VolunteerDashboard({
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'available' | 'completed'
   const [delayModalOpen, setDelayModalOpen] = useState(false);
   const [delayMins, setDelayMins] = useState(15);
-  const [delayReason, setDelayReason] = useState('Heavy traffic near Ring Road Flyover');
+  const [delayReason, setDelayReason] = useState('HEAVY_TRAFFIC');
+  const [delayNotes, setDelayNotes] = useState('Heavy traffic near Ring Road Flyover');
   const [cameraEvidenceTaken, setCameraEvidenceTaken] = useState(false);
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [cameraEvidenceData, setCameraEvidenceData] = useState(null);
   const [otpCode, setOtpCode] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
 
-  // Active assignment
+  // Active assignment with coordinates and realistic ETA
   const [activePickup, setActivePickup] = useState({
-    id: 'assign-401',
+    id: 'deliv-401',
     foodTitle: 'Assorted Paneer Gravy & 200 Rotis',
     servings: 150,
     weightKg: 45.0,
@@ -48,11 +53,66 @@ export default function VolunteerDashboard({
     donorManager: 'Chef Rajesh',
     dropoffLocation: 'Robin Hood Army Janakpuri Community Shelter',
     recipientContact: '+91 98234 56789',
-    etaMins: 22,
+    etaMins: 18,
     pickupOtp: '582901',
-    status: 'EN_ROUTE_TO_PICKUP', // 'EN_ROUTE_TO_PICKUP' | 'COLLECTED' | 'DELIVERED'
-    transitTempC: 64.2
+    status: 'EN_ROUTE_TO_PICKUP', // 'EN_ROUTE_TO_PICKUP' | 'ARRIVED_AT_PICKUP' | 'COLLECTED' | 'DELIVERED'
+    transitTempC: 64.2,
+    pickupLat: 28.5975,
+    pickupLon: 77.1724,
+    dropoffLat: 28.6219,
+    dropoffLon: 77.0878
   });
+
+  // Courier live GPS position
+  const [courierCoords, setCourierCoords] = useState([28.6050, 77.1600]);
+  const [isNearPickup, setIsNearPickup] = useState(false);
+  const [distanceToPickupKm, setDistanceToPickupKm] = useState(1.8);
+
+  // Countdown timer state (seconds)
+  const [secondsRemaining, setSecondsRemaining] = useState(18 * 60 + 30);
+  const [latePolicyStatus, setLatePolicyStatus] = useState('ON_TIME'); // 'ON_TIME' | 'WITHIN_GRACE_PERIOD' | 'MINOR_DELAY' | 'LATE'
+
+  // Standardized Delay Reasons
+  const delayReasonsList = [
+    { code: 'HEAVY_TRAFFIC', label: '🚗 Heavy Traffic / Flyover Jam' },
+    { code: 'VEHICLE_BREAKDOWN', label: '🔧 Vehicle Mechanical Issue / Flat Tire' },
+    { code: 'KITCHEN_PREP_DELAY', label: '🍲 Kitchen Packaging & Sealing Delay' },
+    { code: 'WEATHER_CONDITIONS', label: '🌧️ Inclement Weather / Heavy Rain' },
+    { code: 'GPS_REROUTE', label: '🗺️ Navigation / Road Diversion' },
+    { code: 'OTHER', label: '⚠️ Other Road Contingency' }
+  ];
+
+  // Active countdown effect
+  useEffect(() => {
+    if (!activePickup || activePickup.status === 'DELIVERED') return;
+
+    const timer = setInterval(() => {
+      setSecondsRemaining((prev) => {
+        const next = prev - 1;
+        // Evaluate late policy
+        if (next > 600) {
+          setLatePolicyStatus('ON_TIME');
+        } else if (next > 0) {
+          setLatePolicyStatus('WITHIN_GRACE_PERIOD');
+        } else if (next > -900) {
+          setLatePolicyStatus('MINOR_DELAY');
+        } else {
+          setLatePolicyStatus('LATE');
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [activePickup]);
+
+  const formatCountdown = (totalSecs) => {
+    const isNegative = totalSecs < 0;
+    const absSecs = Math.abs(totalSecs);
+    const mins = Math.floor(absSecs / 60);
+    const secs = absSecs % 60;
+    return `${isNegative ? '-' : ''}${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   // Available pickup assignments in service radius
   const [availableAssignments, setAvailableAssignments] = useState([
@@ -66,7 +126,9 @@ export default function VolunteerDashboard({
       recipientName: 'Akshaya Patra Foundation Shelter',
       recipientAddress: 'Dwarka Sector 10',
       distanceKm: 2.4,
-      urgencyMinutes: 38
+      urgencyMinutes: 38,
+      lat: 28.6100,
+      lon: 77.0380
     },
     {
       id: 'assign-403',
@@ -78,7 +140,9 @@ export default function VolunteerDashboard({
       recipientName: 'Feeding India Shelter',
       recipientAddress: 'Uttam Nagar East',
       distanceKm: 4.1,
-      urgencyMinutes: 90
+      urgencyMinutes: 90,
+      lat: 28.5861,
+      lon: 77.0789
     }
   ]);
 
@@ -109,10 +173,40 @@ export default function VolunteerDashboard({
       etaMins: 20,
       pickupOtp: '741298',
       status: 'EN_ROUTE_TO_PICKUP',
-      transitTempC: 66.0
+      transitTempC: 66.0,
+      pickupLat: item.lat || 28.6100,
+      pickupLon: item.lon || 77.0380,
+      dropoffLat: 28.5833,
+      dropoffLon: 77.0500
     });
+    setSecondsRemaining(20 * 60);
+    setIsNearPickup(false);
+    setDistanceToPickupKm(item.distanceKm || 2.4);
     setActiveTab('active');
-    if (onShowToast) onShowToast(`Assignment accepted! Navigation locked to ${item.donorName}.`);
+    if (onShowToast) onShowToast(`Assignment accepted! Live GPS telemetry locked to ${item.donorName}.`);
+  };
+
+  // GPS Proximity Arrival Verification (<250m)
+  const handleVerifyProximity = () => {
+    // Simulates moving within 150m of loading dock
+    setCourierCoords([activePickup.pickupLat + 0.0008, activePickup.pickupLon + 0.0008]);
+    setDistanceToPickupKm(0.12);
+    setIsNearPickup(true);
+    setActivePickup(prev => ({ ...prev, status: 'ARRIVED_AT_PICKUP' }));
+
+    // Send API call to backend
+    fetch('/api/deliveries/arrive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        delivery_id: activePickup.id,
+        volunteer_id: 'user_arjun_volunteer',
+        current_lat: activePickup.pickupLat + 0.0008,
+        current_lon: activePickup.pickupLon + 0.0008
+      })
+    }).catch(() => {});
+
+    if (onShowToast) onShowToast('GPS Proximity Confirmed! Courier within 120m of pickup loading dock.');
   };
 
   const handleVerifyOtp = (e) => {
@@ -144,12 +238,39 @@ export default function VolunteerDashboard({
   };
 
   const handleReportDelay = () => {
+    const mins = Number(delayMins);
     setActivePickup(prev => ({
       ...prev,
-      etaMins: prev.etaMins + Number(delayMins)
+      etaMins: prev.etaMins + mins
     }));
+    setSecondsRemaining(prev => prev + mins * 60);
+
+    // Call backend delay reporting API
+    fetch('/api/deliveries/report-delay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        delivery_id: activePickup.id,
+        volunteer_id: 'user_arjun_volunteer',
+        delay_reason: delayReason,
+        delay_minutes: mins,
+        notes: delayNotes
+      })
+    }).catch(() => {});
+
     setDelayModalOpen(false);
-    if (onShowToast) onShowToast(`Delay reported. Updated ETA dispatched to donor kitchen.`);
+    if (onShowToast) onShowToast(`Delay reported (+${mins} mins). Updated ETA dispatched to donor kitchen.`);
+  };
+
+  // WhatsApp Operational Share
+  const handleShareWhatsAppStatus = () => {
+    const msg = WhatsAppLifecycle.volunteerApproaching(
+      volunteerUser?.name || 'Arjun Sharma',
+      activePickup?.etaMins || 18,
+      activePickup?.pickupLocation || 'Main Kitchen Gate'
+    );
+    const link = createWhatsAppLink(activePickup.donorContact, msg);
+    window.open(link, '_blank');
   };
 
   return (
@@ -157,7 +278,7 @@ export default function VolunteerDashboard({
       
       {/* Header */}
       <PageHeader
-        title={`Courier Console • ${volunteerUser?.name || 'Arjun Sharma'}`}
+        title={`Courier Rapid Dispatch • ${volunteerUser?.name || 'Arjun Sharma'}`}
         subtitle={`Vehicle: ${volunteerUser?.transportMode || 'Insulated Van (DL-3C-9821)'} • Active Service Radius: ${volunteerUser?.serviceRadiusKm || 15} km`}
         badge="Certified Volunteer"
       />
@@ -179,7 +300,7 @@ export default function VolunteerDashboard({
         <StatCard
           title="Courier Trust Score"
           value="4.96 / 5.0"
-          subtext="Rated by 18 kitchens"
+          subtext="Reliability rated"
           icon={ShieldCheck}
         />
         <StatCard
@@ -201,7 +322,7 @@ export default function VolunteerDashboard({
           }`}
         >
           <Truck className="w-4 h-4" />
-          <span>Active Assignment {activePickup ? '(1 Live)' : '(0)'}</span>
+          <span>Active Rapid Pickup {activePickup ? '(1 Live)' : '(0)'}</span>
         </button>
 
         <button
@@ -213,7 +334,7 @@ export default function VolunteerDashboard({
           }`}
         >
           <Navigation className="w-4 h-4" />
-          <span>Available Near You ({availableAssignments.length})</span>
+          <span>Available In Radius ({availableAssignments.length})</span>
         </button>
 
         <button
@@ -235,43 +356,99 @@ export default function VolunteerDashboard({
           {activePickup ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
-              {/* Left Column: Mission Card */}
+              {/* Left Column: Mission Card & Handover */}
               <div className="lg:col-span-7 fb-card p-6 sm:p-7 space-y-5">
-                <div className="flex items-start justify-between pb-3 border-b border-border">
+                
+                {/* Status Bar with Transparent Late Policy Badge */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
                   <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                      {activePickup.status === 'COLLECTED' ? 'Food Collected • En Route to Shelter' : 'En Route to Donor Kitchen'}
-                    </span>
-                    <h3 className="text-lg font-extrabold text-navy mt-0.5">{activePickup.foodTitle}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                        {activePickup.status === 'COLLECTED' 
+                          ? 'Food Collected • En Route to Shelter' 
+                          : activePickup.status === 'ARRIVED_AT_PICKUP'
+                          ? 'Arrived at Loading Dock'
+                          : 'En Route to Donor Kitchen'}
+                      </span>
+                      
+                      {/* Transparent Late Policy Tag */}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                        latePolicyStatus === 'ON_TIME'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : latePolicyStatus === 'WITHIN_GRACE_PERIOD'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : latePolicyStatus === 'MINOR_DELAY'
+                          ? 'bg-orange-50 text-orange-700 border-orange-200'
+                          : 'bg-red-50 text-red-700 border-red-200'
+                      }`}>
+                        {latePolicyStatus === 'ON_TIME' && '✓ On Track'}
+                        {latePolicyStatus === 'WITHIN_GRACE_PERIOD' && '⏳ Grace Window (10m)'}
+                        {latePolicyStatus === 'MINOR_DELAY' && '⚠️ Minor Delay'}
+                        {latePolicyStatus === 'LATE' && '🚨 Late (Reliability Review)'}
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg font-extrabold text-navy mt-1">{activePickup.foodTitle}</h3>
                     <span className="text-xs text-txt-secondary font-semibold">
-                      {activePickup.servings} Servings ({activePickup.weightKg} kg)
+                      {activePickup.servings} Servings ({activePickup.weightKg} kg) • Category A Ambient Safe
                     </span>
                   </div>
 
-                  <span className="px-3 py-1.5 rounded-full bg-orange-100 text-primary font-extrabold text-xs">
-                    ETA: ~{activePickup.etaMins} Mins
-                  </span>
+                  {/* Countdown Clock (MM:SS) */}
+                  <div className="bg-surface-subtle border border-border px-4 py-2 rounded-xl text-center flex-shrink-0">
+                    <span className="text-[10px] uppercase font-bold text-txt-muted block tracking-wider">Pickup Countdown</span>
+                    <span className={`font-mono text-xl font-extrabold ${secondsRemaining < 300 ? 'text-status-warning' : 'text-primary'}`}>
+                      {formatCountdown(secondsRemaining)}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Live Route Map */}
+                <CourierRouteMap
+                  courierCoords={courierCoords}
+                  pickupCoords={[activePickup.pickupLat, activePickup.pickupLon]}
+                  dropoffCoords={[activePickup.dropoffLat, activePickup.dropoffLon]}
+                  pickupTitle={activePickup.donorManager}
+                  dropoffTitle={activePickup.dropoffLocation}
+                  distanceKm={distanceToPickupKm}
+                  etaMins={activePickup.etaMins}
+                  status={activePickup.status}
+                />
 
                 {/* Navigation Waypoints */}
                 <div className="space-y-3 text-xs">
-                  <div className="p-3.5 rounded-xl bg-surface-subtle border border-border flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-orange-100 text-primary font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                      A
-                    </div>
-                    <div>
-                      <span className="font-bold text-navy block">Pickup Kitchen (Donor)</span>
-                      <span className="text-txt-secondary">{activePickup.pickupLocation}</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-txt-muted">Contact: {activePickup.donorManager}</span>
-                        <a
-                          href={`tel:${activePickup.donorContact}`}
-                          className="font-bold text-primary hover:underline"
-                        >
-                          {activePickup.donorContact}
-                        </a>
+                  <div className="p-3.5 rounded-xl bg-surface-subtle border border-border flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-orange-100 text-primary font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                        A
+                      </div>
+                      <div>
+                        <span className="font-bold text-navy block">Pickup Kitchen (Donor)</span>
+                        <span className="text-txt-secondary">{activePickup.pickupLocation}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-txt-muted">Contact: {activePickup.donorManager}</span>
+                          <a
+                            href={`tel:${activePickup.donorContact}`}
+                            className="font-bold text-primary hover:underline"
+                          >
+                            {activePickup.donorContact}
+                          </a>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Proximity Button if not arrived yet */}
+                    {activePickup.status === 'EN_ROUTE_TO_PICKUP' && (
+                      <button
+                        type="button"
+                        onClick={handleVerifyProximity}
+                        className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs flex items-center gap-1 shadow-sm flex-shrink-0"
+                        title="Simulate or verify GPS proximity within 250m"
+                      >
+                        <Compass className="w-3.5 h-3.5" />
+                        <span>Arrived at Dock</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-surface-subtle border border-border flex items-start gap-3">
@@ -295,10 +472,14 @@ export default function VolunteerDashboard({
                 </div>
 
                 {/* Handover Verification Options */}
-                {activePickup.status === 'EN_ROUTE_TO_PICKUP' ? (
+                {activePickup.status === 'EN_ROUTE_TO_PICKUP' || activePickup.status === 'ARRIVED_AT_PICKUP' ? (
                   <div className="p-4 rounded-xl bg-orange-50/70 border border-orange-200 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-navy text-xs">Step 1: Verify Pickup Handover</span>
+                      <span className="font-bold text-navy text-xs">
+                        {activePickup.status === 'ARRIVED_AT_PICKUP' 
+                          ? '✓ Arrived! Perform Handover Handshake' 
+                          : 'Step 1: Verify Pickup Handover'}
+                      </span>
                       <span className="text-[11px] font-mono text-primary font-bold">
                         Expected OTP: {activePickup.pickupOtp}
                       </span>
@@ -325,7 +506,7 @@ export default function VolunteerDashboard({
                       <span className="text-[11px] text-txt-muted">Or scan donor's QR code:</span>
                       <button
                         type="button"
-                        onClick={() => onOpenQR && onOpenQR({ id: 'active', food_title: activePickup.foodTitle, quantity_servings: activePickup.servings })}
+                        onClick={() => onOpenQR && onOpenQR({ id: activePickup.id, food_title: activePickup.foodTitle, quantity_servings: activePickup.servings })}
                         className="mt-1 w-full py-2 rounded-xl border border-border bg-white text-txt-primary hover:border-primary font-bold text-xs flex items-center justify-center gap-1.5"
                       >
                         <QrCode className="w-4 h-4 text-primary" />
@@ -366,15 +547,25 @@ export default function VolunteerDashboard({
                   </div>
                 )}
 
-                {/* Bottom Emergency / Delay Actions */}
-                <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
-                  <button
-                    onClick={() => setDelayModalOpen(true)}
-                    className="text-status-warning hover:underline font-bold flex items-center gap-1"
-                  >
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Report Transit Delay</span>
-                  </button>
+                {/* Bottom Emergency, WhatsApp & Delay Actions */}
+                <div className="pt-2 border-t border-border flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setDelayModalOpen(true)}
+                      className="text-status-warning hover:underline font-bold flex items-center gap-1"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>Report Transit Delay</span>
+                    </button>
+
+                    <button
+                      onClick={handleShareWhatsAppStatus}
+                      className="text-emerald-700 hover:underline font-bold flex items-center gap-1"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>WhatsApp Donor</span>
+                    </button>
+                  </div>
 
                   <a
                     href={`tel:${activePickup.donorContact}`}
@@ -400,12 +591,16 @@ export default function VolunteerDashboard({
                     <span className="text-status-success">{activePickup.transitTempC}°C (Safe)</span>
                   </div>
                   <div className="flex justify-between text-txt-muted">
-                    <span>Est. Distance to Destination:</span>
-                    <span className="font-semibold text-txt-primary">3.2 km</span>
+                    <span>Distance to Destination:</span>
+                    <span className="font-semibold text-txt-primary">{distanceToPickupKm} km</span>
                   </div>
                   <div className="flex justify-between text-txt-muted">
                     <span>Target Delivery Window:</span>
-                    <span className="font-semibold text-txt-primary">Within 45 Mins</span>
+                    <span className="font-semibold text-txt-primary">Within {activePickup.etaMins + 15} Mins</span>
+                  </div>
+                  <div className="flex justify-between text-txt-muted">
+                    <span>Accountability Policy:</span>
+                    <span className="font-semibold text-navy">Reliability Score (No fines)</span>
                   </div>
                 </div>
 
@@ -413,6 +608,7 @@ export default function VolunteerDashboard({
                   <p>✓ Maintain insulated containers sealed until unloading dock.</p>
                   <p>✓ Present 6-digit OTP or ask recipient shelter to scan delivery QR.</p>
                   <p>✓ Report immediate notice if holding temperature drops below 60°C.</p>
+                  <p>✓ Geofence proximity automatically updates kitchen when within 250m.</p>
                 </div>
               </div>
 
@@ -497,7 +693,7 @@ export default function VolunteerDashboard({
         </div>
       )}
 
-      {/* DELAY REPORTING MODAL */}
+      {/* DELAY MANAGEMENT MODAL (Phase 5 Standardized Reasons) */}
       {delayModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-dark/75 backdrop-blur-sm animate-fadeIn">
           <div className="fb-card w-full max-w-md p-6 bg-white shadow-xl relative border border-border space-y-4">
@@ -510,27 +706,52 @@ export default function VolunteerDashboard({
 
             <div className="flex items-center gap-2.5">
               <AlertTriangle className="w-5 h-5 text-status-warning" />
-              <h3 className="font-extrabold text-base text-navy">Report Courier Delay</h3>
+              <div>
+                <h3 className="font-extrabold text-base text-navy">Report Courier Delay</h3>
+                <span className="text-xs text-txt-muted">Transparent reporting extends deadline and updates kitchen.</span>
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-txt-primary mb-1">Additional Minutes</label>
-              <input
-                type="number"
-                min={5}
-                max={60}
-                value={delayMins}
-                onChange={(e) => setDelayMins(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-border text-sm font-bold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-txt-primary mb-1">Reason for Delay</label>
-              <textarea
-                rows={2}
+              <label className="block text-xs font-bold text-txt-primary mb-1">Standardized Delay Reason</label>
+              <select
                 value={delayReason}
                 onChange={(e) => setDelayReason(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold bg-white"
+              >
+                {delayReasonsList.map(r => (
+                  <option key={r.code} value={r.code}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-txt-primary mb-1">Estimated Extension (Minutes)</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[5, 10, 15, 30].map((mins) => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => setDelayMins(mins)}
+                    className={`py-2 rounded-xl border text-xs font-bold ${
+                      Number(delayMins) === mins 
+                        ? 'bg-primary text-white border-primary shadow-sm' 
+                        : 'border-border text-txt-secondary hover:border-primary'
+                    }`}
+                  >
+                    +{mins}m
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-txt-primary mb-1">Specific Incident Notes (Optional)</label>
+              <textarea
+                rows={2}
+                value={delayNotes}
+                onChange={(e) => setDelayNotes(e.target.value)}
+                placeholder="e.g. Traffic diversion at Sector 4 flyover"
                 className="w-full px-3 py-2 rounded-xl border border-border text-xs"
               />
             </div>
@@ -538,9 +759,9 @@ export default function VolunteerDashboard({
             <button
               type="button"
               onClick={handleReportDelay}
-              className="w-full py-2.5 rounded-xl bg-status-warning hover:bg-amber-600 text-white font-bold text-xs"
+              className="w-full py-2.5 rounded-xl bg-status-warning hover:bg-amber-600 text-white font-bold text-xs shadow-md touch-target"
             >
-              Broadcast Updated ETA
+              Broadcast Updated ETA & Deadline
             </button>
           </div>
         </div>
@@ -551,7 +772,7 @@ export default function VolunteerDashboard({
         isOpen={cameraModalOpen}
         onClose={() => setCameraModalOpen(false)}
         mode={activePickup?.status === 'COLLECTED' ? 'DELIVERY' : 'PICKUP'}
-        donationId={activePickup?.id || 'assign-401'}
+        donationId={activePickup?.id || 'deliv-401'}
         expectedServings={activePickup?.servings || 150}
         onEvidenceSubmitted={(data) => {
           setCameraEvidenceData(data);
@@ -563,4 +784,3 @@ export default function VolunteerDashboard({
     </div>
   );
 }
-

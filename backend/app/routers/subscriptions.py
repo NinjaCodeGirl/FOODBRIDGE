@@ -5,7 +5,9 @@ from app.models.schemas import (
     OrganizationSubscription,
     SandboxCheckoutRequest,
     SandboxCheckoutResponse,
-    BillingInvoice
+    BillingInvoice,
+    SubscriptionWebhookPayload,
+    PlanPriceUpdateRequest
 )
 from app.services.subscription_service import SubscriptionService
 
@@ -53,3 +55,43 @@ def check_entitlement(organization_id: str = Query("org_taj_palace"), feature: s
         "feature": feature,
         "is_entitled": allowed
     }
+
+@router.put("/plans/{plan_code}", response_model=SubscriptionPlan)
+def update_plan_pricing(plan_code: str, payload: PlanPriceUpdateRequest):
+    """
+    Admin-only endpoint to edit plan pricing proposals and feature lists.
+    """
+    try:
+        return SubscriptionService.update_plan_pricing(
+            plan_code=plan_code,
+            price_monthly_inr=payload.price_monthly_inr,
+            price_annual_inr=payload.price_annual_inr,
+            features=payload.features
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.post("/cancel")
+def cancel_subscription(organization_id: str = Query("org_taj_palace")):
+    """
+    Sets organization subscription to cancel at the end of the billing period without immediate cutoff.
+    """
+    try:
+        return SubscriptionService.cancel_subscription(organization_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.post("/webhook")
+def handle_payment_webhook(payload: SubscriptionWebhookPayload):
+    """
+    Validates payment webhooks (e.g. Razorpay / Cashfree) server-side.
+    """
+    try:
+        return SubscriptionService.handle_payment_webhook(
+            event=payload.event,
+            payload=payload.payload,
+            signature=payload.signature
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+

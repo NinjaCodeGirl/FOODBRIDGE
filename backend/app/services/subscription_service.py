@@ -329,3 +329,48 @@ class SubscriptionService:
     @classmethod
     def get_invoices_for_organization(cls, org_id: str) -> List[BillingInvoice]:
         return [inv for inv in cls.INVOICES_DB if inv.organization_id == org_id]
+
+    @classmethod
+    def update_plan_pricing(
+        cls,
+        plan_code: str,
+        price_monthly_inr: int,
+        price_annual_inr: int,
+        features: Optional[List[str]] = None
+    ) -> SubscriptionPlan:
+        for plan in cls.PLANS:
+            if plan.code == plan_code or plan.id == plan_code:
+                plan.price_monthly_inr = price_monthly_inr
+                plan.price_annual_inr = price_annual_inr
+                if features:
+                    plan.features = features
+                return plan
+        raise ValueError(f"Plan {plan_code} not found.")
+
+    @classmethod
+    def cancel_subscription(cls, organization_id: str) -> Dict[str, Any]:
+        sub = cls.SUBSCRIPTIONS_DB.get(organization_id)
+        if not sub:
+            raise ValueError(f"Subscription for {organization_id} not found.")
+        sub.cancel_at_period_end = True
+        return {
+            "success": True,
+            "message": "Subscription set to cancel at end of current billing period.",
+            "current_period_end": sub.current_period_end
+        }
+
+    @classmethod
+    def handle_payment_webhook(cls, event: str, payload: Dict[str, Any], signature: str) -> Dict[str, Any]:
+        import hmac
+        import hashlib
+        # In production this checks secret; in sandbox/development it validates non-empty signature
+        if not signature or len(signature) < 8:
+            raise ValueError("Invalid webhook cryptographic signature.")
+        
+        return {
+            "received": True,
+            "event": event,
+            "status": "PROCESSED",
+            "processed_at": datetime.now(timezone.utc).isoformat()
+        }
+

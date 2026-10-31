@@ -497,3 +497,168 @@ class DistributionAuditSummaryResponse(BaseModel):
     flagged_discrepancies_count: int
     unreconciled_inventory_servings: int
 
+# ==============================================================================
+# 14. Rapid Pickup, Live GPS, Countdown & Delay Management (Phase 5)
+# ==============================================================================
+class DeliveryRequestCreate(BaseModel):
+    listing_id: str
+    ngo_id: str
+    ngo_name: str
+    requested_servings: int = Field(..., gt=0)
+    dropoff_address: str
+    dropoff_lat: float
+    dropoff_lon: float
+    contact_phone: Optional[str] = "+91 98101 23456"
+
+class DeliveryApproveRequest(BaseModel):
+    delivery_id: str
+    prep_time_minutes: int = Field(15, ge=0, le=120)
+    pickup_instructions: Optional[str] = "Service dock rear entry"
+
+class DeliveryAssignRequest(BaseModel):
+    delivery_id: str
+    volunteer_id: str
+    volunteer_name: str
+    volunteer_phone: str = "+91 98222 33445"
+    vehicle_type: str = "VAN"
+    volunteer_lat: float
+    volunteer_lon: float
+
+class DeliveryLocationPing(BaseModel):
+    delivery_id: str
+    volunteer_id: str
+    current_lat: float
+    current_lon: float
+
+class DeliveryDelayReport(BaseModel):
+    delivery_id: str
+    volunteer_id: str
+    delay_reason: str = Field(..., description="HEAVY_TRAFFIC, VEHICLE_BREAKDOWN, KITCHEN_PREP_DELAY, GPS_REROUTE, WEATHER_CONDITIONS, OTHER")
+    delay_minutes: int = Field(..., ge=1, le=120)
+    notes: Optional[str] = None
+
+class DeliveryArrivalVerify(BaseModel):
+    delivery_id: str
+    volunteer_id: str
+    current_lat: float
+    current_lon: float
+
+class DeliveryRecordResponse(BaseModel):
+    id: str
+    listing_id: str
+    ngo_id: str
+    ngo_name: str
+    donor_name: str
+    food_title: str
+    allocated_servings: int
+    pickup_address: str
+    pickup_lat: float
+    pickup_lon: float
+    dropoff_address: str
+    dropoff_lat: float
+    dropoff_lon: float
+    volunteer_id: Optional[str] = None
+    volunteer_name: Optional[str] = None
+    volunteer_phone: Optional[str] = None
+    volunteer_lat: Optional[float] = None
+    volunteer_lon: Optional[float] = None
+    status: str = Field("REQUESTED", description="REQUESTED, APPROVED, ASSIGNED, EN_ROUTE_TO_PICKUP, ARRIVED_AT_PICKUP, COLLECTED, EN_ROUTE_TO_DELIVERY, DELIVERED, CANCELLED")
+    prep_time_minutes: int = 15
+    estimated_travel_minutes: int = 20
+    grace_period_minutes: int = 10
+    pickup_deadline: Optional[datetime] = None
+    accepted_at: Optional[datetime] = None
+    collected_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    late_policy_status: str = "ON_TIME"
+    delay_history: List[Dict[str, Any]] = []
+    created_at: datetime
+
+class LivePickupStatusResponse(BaseModel):
+    delivery_id: str
+    status: str
+    volunteer_name: Optional[str]
+    volunteer_phone: Optional[str]
+    volunteer_lat: Optional[float]
+    volunteer_lon: Optional[float]
+    pickup_lat: float
+    pickup_lon: float
+    dropoff_lat: float
+    dropoff_lon: float
+    distance_to_pickup_km: float
+    estimated_arrival_minutes: int
+    seconds_remaining: int
+    pickup_deadline: Optional[datetime]
+    late_policy_status: str
+    is_delayed: bool
+    delay_reason: Optional[str]
+    is_near_pickup: bool
+
+# ==============================================================================
+# 15. In-App Notifications & Lifecycle Messaging (Phase 7)
+# ==============================================================================
+class NotificationItem(BaseModel):
+    id: str
+    user_id: Optional[str] = None
+    role: str
+    event_type: str = Field(..., description="DONATION_CREATED, FOOD_REQUEST_RECEIVED, REQUEST_ACCEPTED, REQUEST_REJECTED, VOLUNTEER_ASSIGNED, VOLUNTEER_APPROACHING, PICKUP_COMPLETED, DELIVERY_DELAYED, FOOD_DELIVERED, DISTRIBUTION_COMPLETED")
+    title: str
+    message: str
+    action_url: Optional[str] = None
+    priority: str = "NORMAL" # LOW, NORMAL, HIGH, URGENT
+    is_read: bool = False
+    timestamp: datetime
+    metadata: Dict[str, Any] = {}
+
+class NotificationDispatchCreate(BaseModel):
+    role: str
+    event_type: str
+    title: str
+    message: str
+    action_url: Optional[str] = None
+    user_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = {}
+
+# ==============================================================================
+# 16. Food Safety & Security Reporting (Phase 6)
+# ==============================================================================
+class FoodSecurityReportResponse(BaseModel):
+    total_food_listed_servings: int
+    total_food_rescued_servings: int
+    total_food_distributed_servings: int
+    rejected_food_servings: int
+    spoiled_food_servings: int
+    unclaimed_food_servings: int
+    beneficiary_coverage_count: int
+    meals_diverted_from_landfill: int
+    co2_mitigated_kg: float
+    active_partners_count: int
+    fssai_compliance_rate_percent: float
+
+class BatchSplittingReconciliationReport(BaseModel):
+    listing_id: str
+    food_title: str
+    total_listed_servings: int
+    available_servings: int
+    reserved_servings: int
+    in_transit_servings: int
+    delivered_servings: int
+    spoiled_or_cancelled_servings: int
+    is_fully_reconciled: bool
+    allocations_breakdown: List[Dict[str, Any]]
+
+# ==============================================================================
+# 17. Payment Webhook & Admin Pricing Updates (Phase 7)
+# ==============================================================================
+class SubscriptionWebhookPayload(BaseModel):
+    event: str
+    payload: Dict[str, Any]
+    signature: str
+
+class PlanPriceUpdateRequest(BaseModel):
+    plan_code: str
+    price_monthly_inr: int
+    price_annual_inr: int
+    features: Optional[List[str]] = None
+
+

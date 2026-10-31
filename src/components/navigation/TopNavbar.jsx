@@ -16,6 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import NotificationDropdown from './NotificationDropdown';
 
 export default function TopNavbar({
   onToggleDrawer,
@@ -34,6 +35,7 @@ export default function TopNavbar({
 }) {
   const { currentUser, role, logout, switchRole, isAuthenticated } = useAuth();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const roleColors = {
     DONOR: 'bg-orange-100 text-primary border-orange-200',
@@ -120,17 +122,26 @@ export default function TopNavbar({
               </button>
             )}
 
-            {/* Notification Bell */}
-            <button
-              onClick={onOpenNotifications}
-              className="p-2 rounded-xl text-txt-secondary hover:text-txt-primary hover:bg-surface-subtle relative transition-colors touch-target"
-              aria-label="View notifications"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
-              )}
-            </button>
+            {/* Notification Bell & Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="p-2 rounded-xl text-txt-secondary hover:text-txt-primary hover:bg-surface-subtle relative transition-colors touch-target"
+                aria-label="View notifications"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+                )}
+              </button>
+
+              <NotificationDropdown
+                isOpen={notificationsOpen}
+                onClose={() => setNotificationsOpen(false)}
+                role={role}
+                onNotificationClick={() => setNotificationsOpen(false)}
+              />
+            </div>
 
             {/* User Profile or Sign In CTA */}
             {isAuthenticated ? (
