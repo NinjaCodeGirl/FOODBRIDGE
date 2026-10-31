@@ -1,175 +1,246 @@
 import React from 'react';
-import { Utensils, Leaf, Scale, Building2, ShieldCheck, Clock, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { 
+  Utensils, 
+  Leaf, 
+  Scale, 
+  Building2, 
+  ShieldCheck, 
+  Clock, 
+  ArrowUpRight, 
+  TrendingUp,
+  Sparkles,
+  ArrowRight,
+  Truck,
+  CheckCircle2,
+  Users
+} from 'lucide-react';
+import StatCard from './ui/StatCard';
 
-export default function Dashboard({ metrics, onExploreListings }) {
+export default function Dashboard({ metrics, onExploreListings, onPostFood, role = 'DONOR' }) {
   const stats = [
     {
       title: 'Meals Rescued',
       value: metrics?.total_meals_rescued ? metrics.total_meals_rescued.toLocaleString() : '15,420',
       change: '+14% this week',
+      subtext: 'Safe human consumption',
       icon: Utensils,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10 border-emerald-500/20'
+      isDemo: true,
     },
     {
-      title: 'CO₂ Avoided',
+      title: 'CO₂ Mitigated',
       value: metrics?.total_co2_avoided_kg ? `${(metrics.total_co2_avoided_kg / 1000).toFixed(1)}t` : '38.5t',
-      subtext: '2.5 kg CO₂ / meal',
-      change: 'Landfill Methane Mitigated',
+      subtext: '2.5 kg CO₂ / rescued meal',
+      change: 'Landfill Diversion',
       icon: Leaf,
-      color: 'text-green-400',
-      bg: 'bg-green-500/10 border-green-500/20'
+      isDemo: true,
     },
     {
-      title: 'Edible Food Diverted',
+      title: 'Food Diverted',
       value: metrics?.total_food_saved_tonnes ? `${metrics.total_food_saved_tonnes} T` : '4.6 T',
-      change: 'Zero Food Waste Goal',
+      subtext: 'Zero food waste target',
+      change: '+0.8T this month',
       icon: Scale,
-      color: 'text-amber-400',
-      bg: 'bg-amber-500/10 border-amber-500/20'
+      isDemo: true,
     },
     {
-      title: 'Active NGO Partners',
+      title: 'Active NGO Shelters',
       value: metrics?.active_ngo_partners || 54,
-      change: 'Verified Shelters',
+      subtext: 'Verified distribution partners',
+      change: 'Delhi NCR Hub',
       icon: Building2,
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/10 border-blue-500/20'
+      isDemo: true,
     },
   ];
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Hero Banner */}
-      <div className="relative rounded-2xl glass-panel p-8 overflow-hidden border border-emerald-500/20">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="space-y-6 sm:space-y-8 animate-fadeIn">
+      
+      {/* Hero Operational Banner */}
+      <div className="relative rounded-2xl bg-gradient-to-br from-primary via-[#064E3B] to-primary-darker text-white p-6 sm:p-8 overflow-hidden shadow-elevation">
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-4">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Real-Time Environmental & Civic Impact</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-emerald-200 text-xs font-semibold uppercase tracking-wider mb-4">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+            <span>Operational Redistribution Ledger</span>
           </div>
-          <h1 className="font-display font-bold text-3xl sm:text-4xl text-white tracking-tight leading-tight">
-            Connecting Surplus Food with <span className="text-emerald-400">Verified Shelters</span> in Real-Time
-          </h1>
-          <p className="text-zinc-400 text-sm sm:text-base mt-3 leading-relaxed">
-            Every rescued meal mitigates 2.5 kg of atmospheric CO₂ while feeding hungry families across Delhi NCR. Powered by AI freshness scoring and cryptographic QR handshakes.
-          </p>
           
-          <div className="mt-6 flex flex-wrap items-center gap-4">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight">
+            Universal Surplus Food Network for <span className="text-emerald-300">Verified Shelters</span>
+          </h1>
+          
+          <p className="text-emerald-100/90 text-xs sm:text-sm md:text-base mt-3 leading-relaxed max-w-2xl">
+            Bridging commercial donors with shelters and certified volunteers in real-time. Automated eligibility checks, multi-recipient batch splitting, and QR/OTP handshakes.
+          </p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            {onPostFood && (
+              <button
+                onClick={onPostFood}
+                className="px-5 py-2.5 rounded-xl bg-white hover:bg-emerald-50 text-primary font-bold text-xs sm:text-sm transition-all shadow-md flex items-center gap-2 touch-target"
+              >
+                <span>+ Post Surplus Food</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+
             <button
               onClick={onExploreListings}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-all shadow-lg shadow-emerald-600/25 flex items-center space-x-2"
+              className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/20 font-semibold text-xs sm:text-sm transition-all flex items-center gap-2 touch-target"
             >
               <span>Explore Active Feed</span>
               <ArrowUpRight className="w-4 h-4" />
             </button>
-            <div className="flex items-center space-x-2 text-xs text-zinc-400 bg-zinc-900/60 px-3.5 py-2 rounded-xl border border-zinc-800">
-              <Clock className="w-4 h-4 text-emerald-400" />
-              <span>Average Proximity Match: <strong className="text-white">12.4 Mins</strong></span>
+
+            <div className="hidden md:flex items-center gap-2 text-xs text-emerald-200 bg-black/20 px-3.5 py-2 rounded-xl border border-white/10">
+              <Clock className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Average NGO Match: <strong className="text-white">12.4 Mins</strong></span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <div key={idx} className="glass-panel glass-panel-hover rounded-xl p-5 border border-[#1f2b1f] flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">{stat.title}</span>
-                <div className={`p-2 rounded-lg border ${stat.bg}`}>
-                  <Icon className={`w-5 h-5 ${stat.color}`} />
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <div className="font-display font-bold text-3xl text-white tracking-tight">{stat.value}</div>
-                <div className="flex items-center space-x-1.5 text-xs text-emerald-400 mt-1">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <span>{stat.change}</span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {/* Top Stat Cards Grid: Desktop 4, Tablet 2x2, Mobile 2-col */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {stats.map((stat, idx) => (
+          <StatCard
+            key={idx}
+            title={stat.title}
+            value={stat.value}
+            subtext={stat.subtext}
+            change={stat.change}
+            icon={stat.icon}
+            isDemo={stat.isDemo}
+          />
+        ))}
       </div>
 
-      {/* Live Impact Activity Stream & System Flow Highlights */}
+      {/* Live Redistribution Stream & Architecture Blueprint */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
         {/* Activity Stream */}
-        <div className="lg:col-span-2 glass-panel rounded-xl p-6 border border-[#1f2b1f]">
-          <h3 className="font-display font-semibold text-lg text-white mb-4 flex items-center justify-between">
-            <span>Live Redistribution Stream</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          </h3>
-          <div className="space-y-3">
-            {[
-              { time: '2 mins ago', donor: 'NSUT Campus Dining Hall', ngo: 'Akshaya Patra Foundation', servings: 180, status: 'QR Verified', type: 'Category A' },
-              { time: '14 mins ago', donor: 'Taj Palace Banquet Kitchen', ngo: 'Robin Hood Army Janakpuri', servings: 350, status: 'Auto Split (3 NGOs)', type: 'Category B' },
-              { time: '32 mins ago', donor: 'Haldiram Sweets & Kitchen', ngo: 'Feeding India Shelter', servings: 120, status: 'Completed', type: 'Category A' },
-              { time: '1 hr ago', donor: 'Bikanervala Sweets Dwarka', ngo: 'Roti Bank Community Kitchen', servings: 90, status: 'Completed', type: 'Category A' }
-            ].map((activity, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3.5 rounded-lg bg-[#111711] border border-zinc-800/80 text-xs hover:border-emerald-500/30 transition-all">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                    {activity.servings}
-                  </div>
-                  <div>
-                    <div className="font-medium text-white">{activity.donor} → <span className="text-emerald-400">{activity.ngo}</span></div>
-                    <div className="text-zinc-400 text-[11px]">{activity.servings} servings • {activity.time}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
-                    activity.type === 'Category B' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  }`}>
-                    {activity.type}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-medium">
-                    {activity.status}
-                  </span>
-                </div>
+        <div className="lg:col-span-2 fb-card p-5 sm:p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-txt-primary flex items-center gap-2">
+                  <span>Live Redistribution Stream</span>
+                  <span className="w-2 h-2 rounded-full bg-status-success animate-pulse" />
+                </h2>
+                <p className="text-xs text-txt-secondary mt-0.5">
+                  Verified handshakes across Delhi NCR
+                </p>
               </div>
-            ))}
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-txt-secondary border border-border">
+                Demo Activity
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                { time: '2 mins ago', donor: 'NSUT Campus Dining Hall', ngo: 'Akshaya Patra Foundation', servings: 180, status: 'QR Verified', type: 'Category A' },
+                { time: '14 mins ago', donor: 'Taj Palace Banquet Kitchen', ngo: 'Robin Hood Army Janakpuri', servings: 350, status: 'Auto Split (3 NGOs)', type: 'Category B' },
+                { time: '32 mins ago', donor: 'Haldiram Sweets & Kitchen', ngo: 'Feeding India Shelter', servings: 120, status: 'Delivered', type: 'Category A' },
+                { time: '1 hr ago', donor: 'Bikanervala Sweets Dwarka', ngo: 'Roti Bank Community Kitchen', servings: 90, status: 'Delivered', type: 'Category A' }
+              ].map((activity, idx) => (
+                <div 
+                  key={idx} 
+                  className="p-3 sm:p-3.5 rounded-xl border border-border hover:border-primary/40 bg-surface-subtle/50 transition-colors flex items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-primary-light text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      {activity.servings}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-txt-primary truncate">
+                        {activity.donor} <span className="text-txt-muted font-normal">→</span> <span className="text-primary font-semibold">{activity.ngo}</span>
+                      </div>
+                      <div className="text-txt-secondary text-[11px] mt-0.5">
+                        {activity.servings} meals • {activity.time}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                      activity.type === 'Category B' 
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                        : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    }`}>
+                      {activity.type}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold">
+                      {activity.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-border flex items-center justify-between text-xs">
+            <span className="text-txt-secondary">4 successful pickups completed today</span>
+            <button
+              onClick={onExploreListings}
+              className="text-primary font-bold hover:underline inline-flex items-center gap-1"
+            >
+              <span>View All Records</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
-        {/* Blueprint System Architecture Card */}
-        <div className="glass-panel rounded-xl p-6 border border-[#1f2b1f] flex flex-col justify-between">
+        {/* Operational Flow Card */}
+        <div className="fb-card p-5 sm:p-6 flex flex-col justify-between">
           <div>
-            <h3 className="font-display font-semibold text-lg text-white mb-2">System Blueprint</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-              FoodBridge coordinates automated multi-recipient batch splitting, Ola-style contact sharing, and cryptographic QR pickup handshakes.
+            <h2 className="text-base sm:text-lg font-bold text-txt-primary mb-1">
+              FoodBridge Operating Pipeline
+            </h2>
+            <p className="text-xs text-txt-secondary leading-relaxed mb-4">
+              End-to-end transparent surplus food redistribution cycle.
             </p>
 
-            <div className="space-y-2.5 text-xs text-zinc-300">
-              <div className="flex items-center space-x-2 p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span><strong>Gemini AI Freshness Score</strong>: Natural language & temperature decay curves</span>
+            <div className="space-y-3 text-xs">
+              <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-subtle border border-border">
+                <span className="w-5 h-5 rounded-full bg-primary-light text-primary font-bold text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                <div>
+                  <span className="font-bold text-txt-primary block">Food Eligibility Check</span>
+                  <span className="text-txt-secondary text-[11px]">Preparation timestamp, storage temperature & shelf-life calculation.</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2 p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                <div className="w-2 h-2 rounded-full bg-blue-400" />
-                <span><strong>Category A/B Rules</strong>: Cold-chain storage verification</span>
+
+              <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-subtle border border-border">
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-800 font-bold text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                <div>
+                  <span className="font-bold text-txt-primary block">Intelligent NGO Matching</span>
+                  <span className="text-txt-secondary text-[11px]">Deterministic proximity, capacity fit & cold chain verification.</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2 p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                <div className="w-2 h-2 rounded-full bg-amber-400" />
-                <span><strong>Ola Contact Sharing</strong>: Verified phone connection & call log tracking</span>
+
+              <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-subtle border border-border">
+                <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                <div>
+                  <span className="font-bold text-txt-primary block">Multi-Shelter Batch Splitting</span>
+                  <span className="text-txt-secondary text-[11px]">Prevents local oversupply by splitting large volumes.</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2 p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                <div className="w-2 h-2 rounded-full bg-purple-400" />
-                <span><strong>QR Handshake</strong>: Cryptographic token validation at pickup</span>
+
+              <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-subtle border border-border">
+                <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-900 font-bold text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
+                <div>
+                  <span className="font-bold text-txt-primary block">QR / OTP Verified Handover</span>
+                  <span className="text-txt-secondary text-[11px]">Cryptographically signed tokens confirm donor-to-courier handoff.</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-zinc-800 text-[11px] text-zinc-500 text-center">
-            Cognitive Chaos Hackathon • Microsoft Azure & Gemini AI
+          <div className="mt-5 pt-3 border-t border-border text-[11px] text-txt-secondary text-center">
+            FoodBridge Universal Surplus Network
           </div>
         </div>
+
       </div>
+
     </div>
   );
 }

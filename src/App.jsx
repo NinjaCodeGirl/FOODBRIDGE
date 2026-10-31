@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from './components/Navbar';
-import Dashboard from './components/Dashboard';
-import DonationForm from './components/DonationForm';
+import AppShell from './components/layout/AppShell';
+import LandingPage from './components/landing/LandingPage';
+import AuthModal from './components/auth/AuthModal';
+import DonorDashboard from './components/donor/DonorDashboard';
+import RecipientDashboard from './components/recipient/RecipientDashboard';
+import VolunteerDashboard from './components/volunteer/VolunteerDashboard';
+import AdminDashboard from './components/admin/AdminDashboard';
+import DonationWizard from './components/donor/DonationWizard';
+import PricingPage from './components/pricing/PricingPage';
+import SubscriptionManager from './components/subscription/SubscriptionManager';
+import ComplianceRecords from './components/compliance/ComplianceRecords';
 import SurplusFeed from './components/SurplusFeed';
 import LiveMap from './components/LiveMap';
 import Leaderboard from './components/Leaderboard';
@@ -9,7 +17,28 @@ import ContactSharingModal from './components/ContactSharingModal';
 import QRModal from './components/QRModal';
 import RatingModal from './components/RatingModal';
 import OnboardingModal from './components/OnboardingModal';
-import { Split, X, Sparkles, CheckCircle2, Send, MapPin, Clock, PhoneCall } from 'lucide-react';
+import DonationTable from './components/ui/DonationTable';
+import PageHeader from './components/ui/PageHeader';
+import UrgencyBanner from './components/ui/UrgencyBanner';
+import { useAuth } from './context/AuthContext';
+import { 
+  Split, 
+  X, 
+  Sparkles, 
+  CheckCircle2, 
+  ShieldCheck, 
+  PlusCircle, 
+  Truck, 
+  Utensils, 
+  Clock, 
+  Bell, 
+  Check, 
+  Settings as SettingsIcon,
+  HelpCircle,
+  Calendar,
+  Layers,
+  ArrowRight
+} from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -23,16 +52,19 @@ const INITIAL_LISTINGS = [
     classification: 'CATEGORY_A',
     quantity_servings: 180,
     weight_kg: 54.0,
-    freshness_score: 94.5,
+    freshness_score: 94.50,
     risk_level: 'LOW',
+    storage_condition: 'HEATED',
     allergens: ['Dairy', 'Gluten'],
-    validation_hash: 'e3b0c44298fc1c149afbf4c8996fb924',
+    validation_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     estimated_shelf_life_hours: 5.2,
-    status: 'AVAILABLE',
+    pickup_deadline: new Date(Date.now() + 47 * 60 * 1000).toISOString(),
+    status: 'POSTED',
+    matched_ngo: 'Akshaya Patra Foundation',
     pickup_address: 'NSUT Main Campus, Sector 3, Dwarka, New Delhi',
     latitude: 28.6100,
     longitude: 77.0380,
-    created_at: new Date().toISOString()
+    created_at: new Date(Date.now() - 3600 * 1000).toISOString()
   },
   {
     id: 'list-002',
@@ -43,16 +75,19 @@ const INITIAL_LISTINGS = [
     classification: 'CATEGORY_B',
     quantity_servings: 350,
     weight_kg: 105.0,
-    freshness_score: 88.0,
+    freshness_score: 88.00,
     risk_level: 'LOW',
+    storage_condition: 'REFRIGERATED',
     allergens: ['Dairy', 'Gluten'],
-    validation_hash: '8f434346648f6b96df89dda901c5176b',
+    validation_hash: '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',
     estimated_shelf_life_hours: 4.5,
-    status: 'AVAILABLE',
+    pickup_deadline: new Date(Date.now() + 140 * 60 * 1000).toISOString(),
+    status: 'PICKUP_ASSIGNED',
+    matched_ngo: 'Robin Hood Army Janakpuri',
     pickup_address: 'Sardar Patel Marg, Diplomatic Enclave, New Delhi',
     latitude: 28.5975,
     longitude: 77.1724,
-    created_at: new Date().toISOString()
+    created_at: new Date(Date.now() - 7200 * 1000).toISOString()
   },
   {
     id: 'list-003',
@@ -63,16 +98,19 @@ const INITIAL_LISTINGS = [
     classification: 'CATEGORY_A',
     quantity_servings: 120,
     weight_kg: 36.0,
-    freshness_score: 96.0,
+    freshness_score: 96.00,
     risk_level: 'LOW',
+    storage_condition: 'ROOM_TEMP',
     allergens: ['Gluten'],
-    validation_hash: '3f211c4b7890aef481239c01289fe421',
+    validation_hash: '3f211c4b7890aef481239c01289fe4217643a1290bb3412aef6789a12bc901a1',
     estimated_shelf_life_hours: 8.0,
-    status: 'AVAILABLE',
+    pickup_deadline: new Date(Date.now() + 240 * 60 * 1000).toISOString(),
+    status: 'DELIVERED',
+    matched_ngo: 'Feeding India Shelter Home',
     pickup_address: 'Sector 6 Dwarka, New Delhi',
     latitude: 28.5861,
     longitude: 77.0789,
-    created_at: new Date().toISOString()
+    created_at: new Date(Date.now() - 14400 * 1000).toISOString()
   }
 ];
 
@@ -86,24 +124,60 @@ const INITIAL_METRICS = {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('feed');
-  const [activeRole, setActiveRole] = useState('RESTAURANT');
+  const { currentUser, role, isAuthenticated, switchRole, accounts } = useAuth();
 
+  // Navigation & View State
+  // If user is authenticated, default view is 'dashboard'; if not, default view is 'landing'
+  const [viewMode, setViewMode] = useState(() => {
+    return isAuthenticated ? 'dashboard' : 'landing';
+  });
+
+  const [activeTab, setActiveTab] = useState('overview');
+  const [lang, setLang] = useState('en');
+
+  // Sync viewMode when auth changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      setViewMode('dashboard');
+    }
+  }, [isAuthenticated]);
+
+  // Listings & Metrics LocalStorage State
   const [listings, setListings] = useState(() => {
     try {
-      const saved = localStorage.getItem('foodbridge_listings');
+      const saved = localStorage.getItem('foodbridge_listings_v2');
       return saved ? JSON.parse(saved) : INITIAL_LISTINGS;
-    } catch (e) { return INITIAL_LISTINGS; }
+    } catch (e) {
+      return INITIAL_LISTINGS;
+    }
   });
 
   const [liveMetrics, setLiveMetrics] = useState(() => {
     try {
-      const saved = localStorage.getItem('foodbridge_metrics');
+      const saved = localStorage.getItem('foodbridge_metrics_v2');
       return saved ? JSON.parse(saved) : INITIAL_METRICS;
-    } catch (e) { return INITIAL_METRICS; }
+    } catch (e) {
+      return INITIAL_METRICS;
+    }
   });
 
-  // Modal States
+  const [currentPlan, setCurrentPlan] = useState(() => {
+    try {
+      return localStorage.getItem('foodbridge_plan_v2') || 'FOOD_PARTNER_PRO';
+    } catch (e) {
+      return 'FOOD_PARTNER_PRO';
+    }
+  });
+
+  const handleUpdatePlan = (newPlan) => {
+    setCurrentPlan(newPlan);
+    try {
+      localStorage.setItem('foodbridge_plan_v2', newPlan);
+    } catch (e) {}
+  };
+
+  // Modals State
+  const [authModalConfig, setAuthModalConfig] = useState({ isOpen: false, mode: 'login', role: 'DONOR' });
   const [contactModalListing, setContactModalListing] = useState(null);
   const [qrModalListing, setQrModalListing] = useState(null);
   const [ratingModalConfig, setRatingModalConfig] = useState(null);
@@ -111,238 +185,578 @@ export default function App() {
   const [splitModalListing, setSplitModalListing] = useState(null);
   const [splitResult, setSplitResult] = useState(null);
   const [splitLoading, setSplitLoading] = useState(false);
+  const [prefillDonationData, setPrefillDonationData] = useState(null);
 
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState('success'); // 'success' | 'info'
+  // Toast Notification
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
-  const showToast = (msg, type = 'success') => {
-    setToastMessage(msg);
-    setToastType(type);
-    setTimeout(() => setToastMessage(''), 4500);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
   };
 
-  // Persist to localStorage
+  // Sync to LocalStorage
   useEffect(() => {
-    try { localStorage.setItem('foodbridge_listings', JSON.stringify(listings)); } catch (e) {}
+    try {
+      localStorage.setItem('foodbridge_listings_v2', JSON.stringify(listings));
+    } catch (e) {}
   }, [listings]);
 
   useEffect(() => {
-    try { localStorage.setItem('foodbridge_metrics', JSON.stringify(liveMetrics)); } catch (e) {}
+    try {
+      localStorage.setItem('foodbridge_metrics_v2', JSON.stringify(liveMetrics));
+    } catch (e) {}
   }, [liveMetrics]);
 
-  // Try fetching from backend on mount
+  // Initial backend fetch with graceful offline fallback
   useEffect(() => {
+    const fetchActiveListings = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/donations/active`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setListings(prev => {
+              const combined = [...data, ...prev.filter(p => !data.some(d => d.id === p.id))];
+              return combined;
+            });
+          }
+        }
+      } catch (e) {
+        // Backend offline, fallback state active
+      }
+    };
+
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/analytics/impact`);
+        if (res.ok) {
+          const data = await res.json();
+          setLiveMetrics(data);
+        }
+      } catch (e) {}
+    };
+
     fetchActiveListings();
     fetchMetrics();
   }, []);
 
-  const fetchActiveListings = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/donations/active`, { signal: AbortSignal.timeout(3000) });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) setListings(data);
-      }
-    } catch (e) { /* fallback to localStorage */ }
-  };
-
-  const fetchMetrics = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/analytics/impact`, { signal: AbortSignal.timeout(3000) });
-      if (res.ok) {
-        const data = await res.json();
-        setLiveMetrics(data);
-      }
-    } catch (e) { /* fallback */ }
-  };
-
   const handleListingCreated = (newListing) => {
     setListings(prev => [newListing, ...prev]);
-    setActiveTab('feed');
-    showToast(`✅ Surplus listed! AI Freshness Score: ${newListing.freshness_score}%`);
     setLiveMetrics(prev => ({
       ...prev,
-      active_ngo_partners: Math.min(prev.active_ngo_partners + 1, 60)
+      total_meals_rescued: prev.total_meals_rescued + Number(newListing.quantity_servings || 0),
+      total_co2_avoided_kg: prev.total_co2_avoided_kg + Number(((newListing.weight_kg || 10) * 2.5).toFixed(1)),
+      total_food_saved_tonnes: Number((prev.total_food_saved_tonnes + ((newListing.weight_kg || 10) / 1000)).toFixed(2))
     }));
+    showToast(`Donation posted successfully! ID: ${newListing.id}`);
+    setActiveTab('donations');
   };
 
-  // Smart Auto-Split Matching Engine
   const handleTriggerSplit = async (listing) => {
     setSplitModalListing(listing);
     setSplitLoading(true);
-    setSplitResult(null);
-
-    // Try backend first
     try {
       const res = await fetch(`${API_URL}/api/matching/allocate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listing_id: listing.id, max_recipients: 4 }),
-        signal: AbortSignal.timeout(4000)
+        body: JSON.stringify({ listing_id: listing.id, max_recipients: 3 })
       });
       if (res.ok) {
         const data = await res.json();
         setSplitResult(data);
-        showToast(`🔀 Auto-split calculated across ${data.allocations?.length || 3} organizations!`);
-        setSplitLoading(false);
-        return;
+      } else {
+        throw new Error('Fallback split calculation active');
       }
-    } catch (e) { /* fall through */ }
+    } catch (e) {
+      // Deterministic fallback split
+      const total = listing.quantity_servings;
+      const weight = listing.weight_kg || 50;
+      const part1 = Math.round(total * 0.45);
+      const part2 = Math.round(total * 0.35);
+      const part3 = total - part1 - part2;
 
-    // Client-side smart split
-    const totalServings = listing.quantity_servings;
-    const totalWeight = listing.weight_kg;
-    const category = listing.food_category;
-
-    let allocations = [];
-
-    if (category === 'COOKED_MEALS') {
-      allocations = [
-        { ngo_id: 'ngo-101', ngo_name: 'Akshaya Patra Foundation', category_type: 'NGO / Food Shelter', allocated_servings: Math.ceil(totalServings * 0.40), allocated_weight_kg: (totalWeight * 0.40).toFixed(1), distance_km: 2.1, estimated_transit_mins: 12, address: 'Dwarka Sector 10, New Delhi', phone: '+91 98101 23456' },
-        { ngo_id: 'ngo-102', ngo_name: 'Sunrise Children Orphanage', category_type: 'Orphanage', allocated_servings: Math.ceil(totalServings * 0.35), allocated_weight_kg: (totalWeight * 0.35).toFixed(1), distance_km: 3.4, estimated_transit_mins: 16, address: 'Janakpuri Block B, New Delhi', phone: '+91 98234 56789' },
-        { ngo_id: 'ngo-103', ngo_name: 'Hope Senior Old Age Home', category_type: 'Old Age Home', allocated_servings: Math.floor(totalServings * 0.25), allocated_weight_kg: (totalWeight * 0.25).toFixed(1), distance_km: 4.8, estimated_transit_mins: 20, address: 'Uttam Nagar East, New Delhi', phone: '+91 98345 67890' }
-      ];
-    } else if (category === 'PRODUCE') {
-      allocations = [
-        { ngo_id: 'ngo-104', ngo_name: 'Safe Haven Animal Rescue', category_type: '🐾 Animal Shelter', allocated_servings: Math.ceil(totalServings * 0.50), allocated_weight_kg: (totalWeight * 0.50).toFixed(1), distance_km: 3.7, estimated_transit_mins: 18, address: 'Najafgarh Road, New Delhi', phone: '+91 98456 78901' },
-        { ngo_id: 'ngo-101', ngo_name: 'Akshaya Patra Foundation', category_type: 'NGO / Food Shelter', allocated_servings: Math.ceil(totalServings * 0.30), allocated_weight_kg: (totalWeight * 0.30).toFixed(1), distance_km: 2.1, estimated_transit_mins: 12, address: 'Dwarka Sector 10, New Delhi', phone: '+91 98101 23456' },
-        { ngo_id: 'ngo-102', ngo_name: 'Sunrise Children Orphanage', category_type: 'Orphanage', allocated_servings: Math.floor(totalServings * 0.20), allocated_weight_kg: (totalWeight * 0.20).toFixed(1), distance_km: 3.4, estimated_transit_mins: 16, address: 'Janakpuri Block B, New Delhi', phone: '+91 98234 56789' }
-      ];
-    } else if (category === 'BAKERY' || category === 'PACKAGED') {
-      allocations = [
-        { ngo_id: 'ngo-102', ngo_name: 'Sunrise Children Orphanage', category_type: 'Orphanage', allocated_servings: Math.ceil(totalServings * 0.50), allocated_weight_kg: (totalWeight * 0.50).toFixed(1), distance_km: 3.4, estimated_transit_mins: 16, address: 'Janakpuri Block B, New Delhi', phone: '+91 98234 56789' },
-        { ngo_id: 'ngo-103', ngo_name: 'Hope Senior Old Age Home', category_type: 'Old Age Home', allocated_servings: Math.floor(totalServings * 0.30), allocated_weight_kg: (totalWeight * 0.30).toFixed(1), distance_km: 4.8, estimated_transit_mins: 20, address: 'Uttam Nagar East, New Delhi', phone: '+91 98345 67890' },
-        { ngo_id: 'ngo-101', ngo_name: 'Akshaya Patra Foundation', category_type: 'NGO / Food Shelter', allocated_servings: Math.floor(totalServings * 0.20), allocated_weight_kg: (totalWeight * 0.20).toFixed(1), distance_km: 2.1, estimated_transit_mins: 12, address: 'Dwarka Sector 10, New Delhi', phone: '+91 98101 23456' }
-      ];
-    } else { // DAIRY and others
-      allocations = [
-        { ngo_id: 'ngo-101', ngo_name: 'Akshaya Patra Foundation', category_type: 'NGO / Food Shelter', allocated_servings: Math.ceil(totalServings * 0.45), allocated_weight_kg: (totalWeight * 0.45).toFixed(1), distance_km: 2.1, estimated_transit_mins: 12, address: 'Dwarka Sector 10, New Delhi', phone: '+91 98101 23456' },
-        { ngo_id: 'ngo-103', ngo_name: 'Hope Senior Old Age Home', category_type: 'Old Age Home', allocated_servings: Math.ceil(totalServings * 0.35), allocated_weight_kg: (totalWeight * 0.35).toFixed(1), distance_km: 4.8, estimated_transit_mins: 20, address: 'Uttam Nagar East, New Delhi', phone: '+91 98345 67890' },
-        { ngo_id: 'ngo-102', ngo_name: 'Sunrise Children Orphanage', category_type: 'Orphanage', allocated_servings: Math.floor(totalServings * 0.20), allocated_weight_kg: (totalWeight * 0.20).toFixed(1), distance_km: 3.4, estimated_transit_mins: 16, address: 'Janakpuri Block B, New Delhi', phone: '+91 98234 56789' }
-      ];
+      setSplitResult({
+        listing_id: listing.id,
+        total_servings: total,
+        allocations: [
+          {
+            ngo_id: 'ngo-101',
+            ngo_name: 'Akshaya Patra Foundation Shelter',
+            allocated_servings: part1,
+            allocated_weight_kg: Number(((weight * part1) / total).toFixed(1)),
+            distance_km: 1.8,
+            estimated_transit_mins: 15,
+            phone: '+91 98101 23456'
+          },
+          {
+            ngo_id: 'ngo-102',
+            ngo_name: 'Robin Hood Army Janakpuri',
+            allocated_servings: part2,
+            allocated_weight_kg: Number(((weight * part2) / total).toFixed(1)),
+            distance_km: 3.4,
+            estimated_transit_mins: 22,
+            phone: '+91 98234 56789'
+          },
+          {
+            ngo_id: 'ngo-103',
+            ngo_name: 'Feeding India Community Kitchen',
+            allocated_servings: part3,
+            allocated_weight_kg: Number(((weight * part3) / total).toFixed(1)),
+            distance_km: 4.1,
+            estimated_transit_mins: 28,
+            phone: '+91 98345 67890'
+          }
+        ]
+      });
+    } finally {
+      setSplitLoading(false);
     }
+  };
 
-    setSplitResult({
-      listing_id: listing.id,
-      total_servings: totalServings,
-      matching_timestamp: new Date().toISOString(),
-      allocations
+  const handleQuickDonateAgain = (item) => {
+    setPrefillDonationData({
+      donor_name: item.donor_name || currentUser?.organizationName || 'Taj Palace Banquet Kitchen',
+      donor_phone: item.donor_phone || currentUser?.phone || '+91 98999 11223',
+      food_title: item.food_title,
+      food_category: item.food_category,
+      classification: item.classification || 'CATEGORY_A',
+      quantity_servings: item.quantity_servings,
+      weight_kg: item.weight_kg,
+      storage_condition: item.storage_condition || 'REFRIGERATED',
+      pickup_address: item.pickup_address,
+      latitude: item.latitude,
+      longitude: item.longitude,
+      allergens: item.allergens || []
     });
-    setSplitLoading(false);
+    setActiveTab('post');
+    showToast(`Pre-filled food details from previous donation: "${item.food_title}". Please confirm fresh preparation time.`);
   };
 
-  const handleApproveSplitDispatch = () => {
-    if (!splitModalListing || !splitResult) return;
-
-    setListings(prev => prev.map(item => {
-      if (item.id === splitModalListing.id) {
-        return { ...item, status: 'SPLIT_ALLOCATED', split_allocations: splitResult.allocations };
-      }
-      return item;
-    }));
-
-    // Update metrics
-    setLiveMetrics(prev => ({
-      ...prev,
-      total_meals_rescued: prev.total_meals_rescued + Math.floor(splitModalListing.quantity_servings * 0.9),
-      total_co2_avoided_kg: Number((prev.total_co2_avoided_kg + (splitModalListing.weight_kg || 10) * 2.5).toFixed(1)),
-      verified_pickups_count: prev.verified_pickups_count + splitResult.allocations.length
-    }));
-
-    showToast(`🚀 Dispatch approved! Push notifications sent to ${splitResult.allocations.length} organizations!`);
-    setSplitModalListing(null);
-    setSplitResult(null);
+  const openAuthModal = (mode = 'login', targetRole = 'DONOR') => {
+    setAuthModalConfig({ isOpen: true, mode, role: targetRole });
   };
 
-  const handleQRVerified = (verifiedListing) => {
-    setListings(prev => prev.map(item => {
-      if (item.id === verifiedListing.id) {
-        return { ...item, status: 'VERIFIED_PICKUP' };
-      }
-      return item;
-    }));
+  // If visitor is viewing the Landing Page
+  if (viewMode === 'landing') {
+    return (
+      <>
+        <LandingPage
+          lang={lang}
+          setLang={setLang}
+          onOpenAuth={openAuthModal}
+          onNavigateToPricing={() => {
+            setViewMode('dashboard');
+            setActiveTab('pricing');
+          }}
+          metrics={liveMetrics}
+        />
 
-    setLiveMetrics(prev => ({
-      ...prev,
-      total_meals_rescued: prev.total_meals_rescued + (verifiedListing.quantity_servings || 50),
-      total_co2_avoided_kg: Number((prev.total_co2_avoided_kg + (verifiedListing.weight_kg || 15) * 2.5).toFixed(1)),
-      total_food_saved_tonnes: Number((prev.total_food_saved_tonnes + (verifiedListing.weight_kg || 15) / 1000).toFixed(2)),
-      verified_pickups_count: prev.verified_pickups_count + 1
-    }));
+        <AuthModal
+          isOpen={authModalConfig.isOpen}
+          onClose={() => setAuthModalConfig({ isOpen: false, mode: 'login', role: 'DONOR' })}
+          initialMode={authModalConfig.mode}
+          initialRole={authModalConfig.role}
+        />
+      </>
+    );
+  }
 
-    showToast(`✅ QR Pickup verified for "${verifiedListing.food_title}"! Impact stats updated.`);
-  };
-
-  const handleRoleChange = (newRole) => {
-    setActiveRole(newRole);
-    if (newRole === 'NGO') {
-      setActiveTab('feed');
-      showToast('🏥 Switched to NGO Mode — Claim surplus food and generate QR handoffs.', 'info');
-    } else if (newRole === 'RESTAURANT') {
-      setActiveTab('donate');
-      showToast('🍴 Switched to Donor Mode — List surplus food for AI evaluation.', 'info');
-    } else if (newRole === 'ADMIN') {
-      setActiveTab('analytics');
-      showToast('📊 Switched to Admin Mode — Platform analytics & oversight.', 'info');
-    }
-  };
+  // Active Role determination: fall back to DONOR if not authenticated or demo
+  const activeWorkspaceRole = role || 'DONOR';
 
   return (
-    <div className="min-h-screen bg-[#0a0f0a] text-[#e8f0e8] flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <AppShell
+      role={activeWorkspaceRole}
+      setRole={switchRole}
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      onOpenOnboarding={() => setShowOnboarding(true)}
+      onPostFood={() => {
+        setPrefillDonationData(null);
+        setActiveTab('post');
+      }}
+      currentPlan={currentPlan}
+      onNavigateToSubscription={() => setActiveTab('subscription')}
+      onNavigateToPricing={() => setActiveTab('pricing')}
+      onOpenAuth={openAuthModal}
+      onNavigateToLanding={() => setViewMode('landing')}
+      lang={lang}
+      setLang={setLang}
+      toastMessage={toast.message}
+      toastType={toast.type}
+      onCloseToast={() => setToast({ message: '', type: 'success' })}
+    >
+      {/* 1. RESTAURANT / DONOR WORKSPACE */}
+      {activeWorkspaceRole === 'DONOR' && (
+        <>
+          {activeTab === 'overview' && (
+            <DonorDashboard
+              donorName={currentUser?.organizationName || 'Taj Palace Banquet Kitchen'}
+              donations={listings}
+              onPostFood={() => {
+                setPrefillDonationData(null);
+                setActiveTab('post');
+              }}
+              onViewDonation={(d) => showToast(`Viewing details for: ${d.food_title}`)}
+              onOpenQR={(d) => setQrModalListing(d)}
+              onOpenContact={(d) => setContactModalListing(d)}
+              onTrackPickup={() => setActiveTab('pickups')}
+              onViewFullImpact={() => setActiveTab('impact')}
+              onTriggerSplit={handleTriggerSplit}
+              onQuickDonateAgain={handleQuickDonateAgain}
+              currentPlan={currentPlan}
+              onNavigateToPricing={() => setActiveTab('pricing')}
+              onNavigateToSubscription={() => setActiveTab('subscription')}
+              onNavigateToCompliance={() => setActiveTab('compliance')}
+            />
+          )}
 
-      {/* Toast Banner */}
-      {toastMessage && (
-        <div className={`fixed top-20 right-6 z-50 p-4 rounded-xl ${
-          toastType === 'info' ? 'bg-blue-600' : 'bg-emerald-600'
-        } text-white font-semibold text-xs shadow-2xl flex items-center space-x-2 max-w-xs animate-bounce`}>
-          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-          <span>{toastMessage}</span>
+          {activeTab === 'donations' && (
+            <div className="space-y-6">
+              <PageHeader
+                title="My Food Donations"
+                subtitle="Track live surplus listings, verification codes, and pickup status"
+                badge={`${listings.length} Active`}
+                action={
+                  <button
+                    onClick={() => setActiveTab('post')}
+                    className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shadow-orange touch-target"
+                  >
+                    <PlusCircle className="w-4 h-4 stroke-[2.5]" />
+                    <span>+ Post New Food</span>
+                  </button>
+                }
+              />
+
+              <UrgencyBanner
+                title="350 prepared meals — pickup deadline in 47 min"
+                subtitle="Robin Hood Army courier is en route to loading dock #2."
+                timeLeft="47 min left"
+                actionLabel="Track Pickup"
+                onAction={() => setActiveTab('pickups')}
+              />
+
+              <DonationTable
+                donations={listings}
+                onView={(d) => showToast(`Viewing details for: ${d.food_title}`)}
+                onOpenQR={(d) => setQrModalListing(d)}
+                onOpenContact={(d) => setContactModalListing(d)}
+                onTriggerSplit={handleTriggerSplit}
+                onQuickDonateAgain={handleQuickDonateAgain}
+                role={activeWorkspaceRole}
+              />
+            </div>
+          )}
+
+          {activeTab === 'post' && (
+            <DonationWizard
+              onListingCreated={handleListingCreated}
+              API_URL={API_URL}
+              initialData={prefillDonationData}
+              onCancel={() => setActiveTab('overview')}
+            />
+          )}
+
+          {activeTab === 'pickups' && (
+            <div className="space-y-6">
+              <PageHeader
+                title="Active Pickup & Transit Coordination"
+                subtitle="Coordinate courier dispatch, ETA tracking, and QR/OTP security handshakes"
+                badge="Live Dispatch"
+              />
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="fb-card p-6 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">In Transit</span>
+                      <h3 className="text-lg font-extrabold text-navy mt-1">Assorted Paneer Gravy & Rotis (350 servings)</h3>
+                      <p className="text-xs text-txt-secondary">{currentUser?.organizationName || 'Taj Palace Banquet Kitchen'} → Robin Hood Army Janakpuri</p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-orange-100 text-primary border border-orange-200 text-xs font-bold">
+                      ETA 18 min
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-surface-subtle text-xs space-y-1.5 border border-border">
+                    <div className="flex justify-between">
+                      <span className="text-txt-muted">Assigned Volunteer:</span>
+                      <span className="font-bold text-navy">Arjun Sharma (+91 98234 56789)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-txt-muted">Vehicle / Transport:</span>
+                      <span className="font-semibold text-txt-primary">Insulated Van (DL-3C-9821)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-txt-muted">Verification Mode:</span>
+                      <span className="font-bold text-primary">QR Handshake & 6-Digit OTP</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      onClick={() => setQrModalListing(listings[1] || listings[0])}
+                      className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-orange touch-target"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Verify Handover</span>
+                    </button>
+                    <button
+                      onClick={() => setContactModalListing(listings[1] || listings[0])}
+                      className="px-4 py-2.5 rounded-xl border border-border hover:bg-gray-50 text-txt-primary font-semibold text-xs touch-target"
+                    >
+                      <span>Call Courier</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="fb-card p-6 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-base font-extrabold text-navy mb-1">
+                      Legal Chain of Custody & Verification
+                    </h3>
+                    <p className="text-xs text-txt-secondary mb-4 leading-relaxed">
+                      FoodBridge uses cryptographic JWT tokens to prevent unauthorized claims and food diversion during transit.
+                    </p>
+
+                    <div className="space-y-3 text-xs">
+                      <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                        <Check className="w-4 h-4 text-status-success flex-shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-emerald-950 block">Step 1: Allocation Matched</strong>
+                          <span className="text-emerald-800 text-[11px]">Recipient NGO accepted allocation. Volunteer dispatched.</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-50 border border-orange-200">
+                        <Clock className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-orange-950 block">Step 2: Courier Handover</strong>
+                          <span className="text-orange-800 text-[11px]">Scan courier QR code or verify 6-digit OTP code at loading dock.</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
+                        <ShieldCheck className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-blue-950 block">Step 3: Verified Impact Issued</strong>
+                          <span className="text-blue-800 text-[11px]">2.5 kg CO₂ mitigated recorded in public audited ledger.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 2. RECIPIENT / NGO WORKSPACE */}
+      {activeWorkspaceRole === 'NGO' && (
+        <RecipientDashboard
+          ngoUser={currentUser}
+          listings={listings}
+          externalTab={activeTab}
+          onRequestFood={(req) => {
+            showToast(`Food requested: ${req.requestedServings} servings reserved!`);
+          }}
+          onOpenQR={(item) => setQrModalListing(item)}
+          onOpenContact={(item) => setContactModalListing(item)}
+          onOpenRating={(item) => setRatingModalConfig({ listing: item, role: 'NGO' })}
+          onTriggerSplit={handleTriggerSplit}
+          onShowToast={showToast}
+        />
+      )}
+
+      {/* 3. VOLUNTEER / COURIER WORKSPACE */}
+      {activeWorkspaceRole === 'VOLUNTEER' && (
+        <VolunteerDashboard
+          volunteerUser={currentUser}
+          onOpenQR={(item) => setQrModalListing(item)}
+          onShowToast={showToast}
+        />
+      )}
+
+      {/* 4. PLATFORM ADMIN WORKSPACE */}
+      {activeWorkspaceRole === 'ADMIN' && (
+        <AdminDashboard
+          metrics={liveMetrics}
+          listings={listings}
+          accounts={accounts}
+          externalTab={activeTab}
+          onShowToast={showToast}
+        />
+      )}
+
+      {/* 5. COMMON TABS (Impact, Pricing, Subscription, Compliance, Settings) */}
+      {(activeTab === 'impact' || activeTab === 'leaderboard') && (
+        <div className="space-y-6">
+          <PageHeader
+            title="Environmental & Civic Impact Ledger"
+            subtitle="Audited food diversion, carbon offset certificates, and community trust metrics"
+            badge="Audited Ledger"
+          />
+          <Leaderboard />
         </div>
       )}
 
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        activeRole={activeRole}
-        setActiveRole={handleRoleChange}
-        liveMetrics={liveMetrics}
-        onOpenOnboarding={() => setShowOnboarding(true)}
+      {activeTab === 'pricing' && (
+        <PricingPage
+          currentPlan={currentPlan}
+          onSelectPlan={(planId) => {
+            handleUpdatePlan(planId);
+            showToast(`Subscription plan updated to ${planId.replace(/_/g, ' ')}!`);
+            setActiveTab('subscription');
+          }}
+          onOpenEnterpriseModal={() => {
+            showToast('Enterprise quotation request submitted to sales queue!');
+          }}
+          role={activeWorkspaceRole}
+        />
+      )}
+
+      {activeTab === 'subscription' && (
+        <SubscriptionManager
+          currentPlan={currentPlan}
+          onNavigateToPricing={() => setActiveTab('pricing')}
+          onDowngradeToFree={() => {
+            handleUpdatePlan('COMMUNITY_FREE');
+            showToast('Downgraded to Community Free. Food donation remains 100% active!');
+          }}
+          orgName={currentUser?.organizationName || 'Taj Palace Banquet Kitchen'}
+        />
+      )}
+
+      {activeTab === 'compliance' && activeWorkspaceRole !== 'ADMIN' && (
+        <ComplianceRecords
+          listings={listings}
+          role={activeWorkspaceRole}
+        />
+      )}
+
+      {activeTab === 'notifications' && (
+        <div className="space-y-6">
+          <PageHeader
+            title="Notifications & Activity Alerts"
+            subtitle="Operational updates on food matches, courier arrivals, and handovers"
+            badge="2 Unread"
+          />
+
+          <div className="space-y-3">
+            {[
+              { id: 1, title: 'Donation Matched with Akshaya Patra', desc: '180 servings of Dal Makhani matched with Akshaya Patra Foundation.', time: '12 min ago', unread: true },
+              { id: 2, title: 'Courier En Route to Kitchen', desc: 'Arjun Sharma (Van DL-3C-9821) is 15 minutes away for pickup.', time: '28 min ago', unread: true },
+              { id: 3, title: 'Handover Verified for Bikanervala Sweets', desc: '120 servings delivered to Feeding India Shelter. 90 kg CO2 mitigated.', time: '2 hours ago', unread: false },
+              { id: 4, title: 'New Trust Rating Received', desc: 'Akshaya Patra Foundation rated your kitchen 5 stars for hygiene.', time: 'Yesterday', unread: false }
+            ].map((n) => (
+              <div 
+                key={n.id}
+                className={`p-4 rounded-xl border transition-all flex items-start justify-between gap-3 ${
+                  n.unread ? 'bg-orange-50/50 border-orange-200' : 'bg-white border-border'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    n.unread ? 'bg-primary text-white' : 'bg-surface-subtle text-txt-secondary'
+                  }`}>
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-navy">{n.title}</h4>
+                    <p className="text-xs text-txt-secondary mt-0.5">{n.desc}</p>
+                    <span className="text-[10px] text-txt-muted block mt-1">{n.time}</span>
+                  </div>
+                </div>
+                {n.unread && (
+                  <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'settings' && (
+        <div className="space-y-6">
+          <PageHeader
+            title="Organization & Account Settings"
+            subtitle="Manage your profile, cold storage capabilities, notification channels, and FSSAI credentials"
+            badge={activeWorkspaceRole}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="fb-card p-6 space-y-4">
+              <h3 className="text-sm font-extrabold text-navy flex items-center gap-2">
+                <SettingsIcon className="w-4 h-4 text-primary" />
+                <span>Organization Details</span>
+              </h3>
+              
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="text-txt-secondary font-medium block">Organization Name</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={currentUser?.organizationName || 'Taj Palace Banquet Kitchen'}
+                    className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-subtle border border-border text-navy font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-txt-secondary font-medium block">Registered Address</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={currentUser?.address || 'Sardar Patel Marg, Diplomatic Enclave, New Delhi'}
+                    className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-subtle border border-border text-txt-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-txt-secondary font-medium block">Verified Contact Phone</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={currentUser?.phone || '+91 98999 11223'}
+                    className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-subtle border border-border text-navy font-bold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="fb-card p-6 space-y-4">
+              <h3 className="text-sm font-extrabold text-navy flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                <span>Trust & Verification Status</span>
+              </h3>
+
+              <div className="p-4 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-primary block">Trust Score: 4.98 / 5.0</span>
+                  <span className="text-[11px] text-txt-secondary">Verified by 34 pickup handshakes</span>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-primary text-white text-xs font-bold shadow-sm">
+                  Verified Tier A
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs text-txt-secondary">
+                <p>✓ Government FSSAI registration validated ({currentUser?.fssaiNumber || '10014011001890'})</p>
+                <p>✓ Temperature compliance holding audited</p>
+                <p>✓ 100% on-time pickup release record</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALS */}
+      <AuthModal
+        isOpen={authModalConfig.isOpen}
+        onClose={() => setAuthModalConfig({ isOpen: false, mode: 'login', role: 'DONOR' })}
+        initialMode={authModalConfig.mode}
+        initialRole={authModalConfig.role}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {activeTab === 'analytics' && (
-          <Dashboard metrics={liveMetrics} onExploreListings={() => setActiveTab('feed')} />
-        )}
-
-        {activeTab === 'donate' && (
-          <DonationForm onListingCreated={handleListingCreated} API_URL={API_URL} />
-        )}
-
-        {activeTab === 'feed' && (
-          <SurplusFeed
-            listings={listings}
-            onTriggerSplit={handleTriggerSplit}
-            onOpenContactModal={(listing) => setContactModalListing(listing)}
-            onOpenQRModal={(listing) => setQrModalListing(listing)}
-            onOpenRatingModal={(listing, role) => setRatingModalConfig({ listing, role: role || activeRole })}
-          />
-        )}
-
-        {activeTab === 'map' && (
-          <LiveMap
-            listings={listings}
-            onOpenContactModal={(listing) => setContactModalListing(listing)}
-            onTriggerSplit={handleTriggerSplit}
-          />
-        )}
-
-        {activeTab === 'leaderboard' && (
-          <Leaderboard />
-        )}
-      </main>
-
-      {/* Contact Modal */}
       {contactModalListing && (
         <ContactSharingModal
           listing={contactModalListing}
@@ -351,152 +765,101 @@ export default function App() {
         />
       )}
 
-      {/* QR Modal */}
       {qrModalListing && (
         <QRModal
           listing={qrModalListing}
           onClose={() => setQrModalListing(null)}
           API_URL={API_URL}
-          onVerified={() => handleQRVerified(qrModalListing)}
-          onOpenRating={(listing) => {
-            setQrModalListing(null);
-            setRatingModalConfig({ listing, role: 'NGO' });
-          }}
         />
       )}
 
-      {/* Dual-Sided Rating Modal */}
       {ratingModalConfig && (
         <RatingModal
           listing={ratingModalConfig.listing}
           initialRole={ratingModalConfig.role}
           onClose={() => setRatingModalConfig(null)}
           API_URL={API_URL}
-          onRatingSubmitted={() => {
-            showToast('⭐ Trust rating logged to Public Trust Ledger!');
-            setRatingModalConfig(null);
-          }}
+          onRatingSubmitted={() => showToast('Trust rating verified & recorded in ledger!')}
         />
       )}
 
-      {/* Onboarding */}
       {showOnboarding && (
-        <OnboardingModal onClose={() => { setShowOnboarding(false); setActiveTab('feed'); }} />
+        <OnboardingModal onClose={() => setShowOnboarding(false)} />
       )}
 
-      {/* Auto-Split Modal */}
+      {/* Auto-Split Batch Modal */}
       {splitModalListing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="glass-panel w-full max-w-lg rounded-2xl p-6 border border-emerald-500/40 shadow-2xl relative space-y-5">
-            {/* Close */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-dark/75 backdrop-blur-sm animate-fadeIn">
+          <div className="fb-card w-full max-w-lg p-6 bg-white shadow-xl relative space-y-5 border border-border">
             <button
               onClick={() => { setSplitModalListing(null); setSplitResult(null); }}
-              className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-all"
+              className="absolute top-4 right-4 p-2 text-txt-secondary hover:text-navy rounded-xl hover:bg-surface-subtle transition-colors"
+              aria-label="Close auto-split modal"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* Header */}
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <Split className="w-6 h-6" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                <Split className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-display font-bold text-lg text-white">Smart Auto-Split Allocation</h3>
-                <p className="text-xs text-zinc-400">Multi-recipient distribution across NGOs, Orphanages & Animal Shelters</p>
-              </div>
-            </div>
-
-            {/* Listing being split */}
-            <div className="p-3 rounded-xl bg-[#111711] border border-zinc-800 text-xs">
-              <div className="text-zinc-400 mb-1">Splitting:</div>
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-white">{splitModalListing.food_title}</span>
-                <span className="text-emerald-400 font-bold">{splitModalListing.quantity_servings} servings · {splitModalListing.weight_kg} kg</span>
-              </div>
-              <div className="text-zinc-500 text-[10px] mt-0.5 flex items-center space-x-1">
-                <MapPin className="w-3 h-3" />
-                <span>{splitModalListing.pickup_address}</span>
+                <h3 className="font-extrabold text-base text-navy font-display">
+                  Multi-NGO Algorithmic Batch Splitting
+                </h3>
+                <p className="text-xs text-txt-secondary">
+                  Distributes {splitModalListing.quantity_servings} meals across nearby verified shelters
+                </p>
               </div>
             </div>
 
             {splitLoading ? (
-              <div className="p-8 text-center space-y-3">
-                <Sparkles className="w-8 h-8 text-emerald-400 animate-spin mx-auto" />
-                <div className="text-xs text-zinc-400">Running Haversine proximity engine + capacity matching...</div>
-                <div className="text-[10px] text-zinc-600">Evaluating NGOs, Orphanages, Animal Shelters & Old Age Homes</div>
+              <div className="py-12 text-center text-xs text-txt-secondary space-y-2">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                <p>Computing optimal proximity and capacity routes...</p>
               </div>
             ) : splitResult ? (
               <div className="space-y-4">
-                {/* Summary Banner */}
-                <div className="p-3 rounded-xl bg-[#111711] border border-zinc-800 text-xs flex justify-between items-center">
-                  <span>Total Surplus: <strong className="text-white">{splitResult.total_servings} Servings</strong></span>
-                  <span className="text-emerald-400 font-semibold">→ {splitResult.allocations?.length} Organizations</span>
+                <div className="p-3.5 rounded-xl bg-surface-subtle border border-border text-xs flex justify-between items-center">
+                  <span className="font-semibold text-txt-secondary">Total Batch Quantity:</span>
+                  <span className="font-extrabold text-primary text-sm">{splitResult.total_servings} Servings</span>
                 </div>
 
-                {/* Allocations */}
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {splitResult.allocations?.map((alloc, idx) => {
-                    const pct = Math.round((alloc.allocated_servings / splitResult.total_servings) * 100);
-                    return (
-                      <div key={idx} className="p-3.5 rounded-xl bg-[#111711] border border-emerald-500/20 space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <span className="font-bold text-white text-sm block">{alloc.ngo_name}</span>
-                            <span className="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider">{alloc.category_type}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-xs border border-emerald-500/30 block">
-                              {alloc.allocated_servings} Servings
-                            </span>
-                            <span className="text-[10px] text-zinc-500">{alloc.allocated_weight_kg} kg · {pct}%</span>
-                          </div>
-                        </div>
-                        {/* Allocation bar */}
-                        <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                        <div className="flex items-center justify-between text-zinc-400 text-[10px]">
-                          <span className="flex items-center space-x-1">
-                            <MapPin className="w-2.5 h-2.5" />
-                            <span>{alloc.address} ({alloc.distance_km} km)</span>
-                          </span>
-                          <span className="flex items-center space-x-1">
-                            <Clock className="w-2.5 h-2.5" />
-                            <span>ETA: {alloc.estimated_transit_mins} mins</span>
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-1 text-[10px] text-zinc-500">
-                          <PhoneCall className="w-2.5 h-2.5" />
-                          <span>{alloc.phone}</span>
+                <div className="space-y-2.5">
+                  <span className="text-xs font-bold text-txt-secondary uppercase tracking-wider block">
+                    Recommended Allocations:
+                  </span>
+                  {splitResult.allocations.map((alloc, idx) => (
+                    <div key={idx} className="p-3.5 rounded-xl border border-border hover:border-primary/40 bg-white transition-colors flex items-center justify-between gap-3 text-xs">
+                      <div>
+                        <div className="font-extrabold text-navy">{alloc.ngo_name}</div>
+                        <div className="text-[11px] text-txt-secondary mt-0.5">
+                          ✓ {alloc.distance_km} km away • {alloc.estimated_transit_mins} min ETA
                         </div>
                       </div>
-                    );
-                  })}
+                      <div className="text-right flex-shrink-0">
+                        <span className="font-extrabold text-primary text-sm">{alloc.allocated_servings}</span>
+                        <span className="text-[10px] text-txt-muted block">servings</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Approve Button */}
                 <button
-                  onClick={handleApproveSplitDispatch}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-sm transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2"
+                  onClick={() => {
+                    setSplitModalListing(null);
+                    showToast('Multi-NGO allocation batches assigned!');
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-orange transition-all touch-target"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>Approve Split & Dispatch Push Notifications</span>
+                  Confirm & Dispatch Batch Allocations
                 </button>
-
-                <div className="text-center text-[10px] text-emerald-400">
-                  ⚡ Simultaneous push alerts will be triggered to all {splitResult.allocations?.length} recipient organizations
-                </div>
               </div>
             ) : null}
           </div>
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="glass-panel border-t border-[#1f2b1f] py-6 text-center text-xs text-zinc-500">
-        FoodBridge Connect © 2026 • Build With Bharat Hackathon • Team UNION, Netaji Subhas University of Technology
-      </footer>
-    </div>
+    </AppShell>
   );
 }

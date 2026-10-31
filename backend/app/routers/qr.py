@@ -1,5 +1,11 @@
 from fastapi import APIRouter
-from app.models.schemas import QRHandshakeCreate, QRVerificationResponse, QRVerifyRequest, QRVerifyResult
+from app.models.schemas import (
+    QRHandshakeCreate,
+    QRVerificationResponse,
+    QRVerifyRequest,
+    OTPVerifyRequest,
+    QRVerifyResult
+)
 from app.services.qr_service import QRHandshakeService
 from app.services.impact_tracker import ImpactTrackerService
 
@@ -17,6 +23,13 @@ def create_verification_qr(payload: QRHandshakeCreate):
 @router.post("/verify", response_model=QRVerifyResult)
 def verify_pickup_qr(req: QRVerifyRequest):
     result = QRHandshakeService.verify_token(req.verification_token, req.scanned_by_role)
+    if result.success:
+        ImpactTrackerService.record_successful_handshake(result.meals_rescued)
+    return result
+
+@router.post("/verify-otp", response_model=QRVerifyResult)
+def verify_pickup_otp(req: OTPVerifyRequest):
+    result = QRHandshakeService.verify_otp(req.donation_id, req.otp_code, req.role)
     if result.success:
         ImpactTrackerService.record_successful_handshake(result.meals_rescued)
     return result

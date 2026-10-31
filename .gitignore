@@ -23,3 +23,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.zip
+
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+

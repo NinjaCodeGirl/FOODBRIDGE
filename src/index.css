@@ -2,40 +2,130 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary: #EA580C;
+  --primary-dark: #C2410C;
+  --primary-darker: #9A3412;
+  --primary-light: #FFEDD5;
+  --navy: #0F172A;
+  --navy-dark: #020617;
+  --bg: #F8FAFC;
+  --card: #FFFFFF;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --border: #E2E8F0;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --info: #3B82F6;
+}
+
 @layer base {
+  html {
+    color-scheme: light;
+    scroll-behavior: smooth;
+  }
+  
   body {
-    background-color: #0a0f0a;
-    color: #e8f0e8;
-    font-family: 'Inter', sans-serif;
+    background-color: #F8FAFC;
+    color: #0F172A;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* Accessible focus rings */
+  *:focus-visible {
+    outline: 2px solid #EA580C;
+    outline-offset: 2px;
+  }
+  
+  /* Prevent automatic mobile zoom on inputs */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  @media (min-width: 768px) {
+    input, select, textarea {
+      font-size: 14px !important;
+    }
   }
 }
 
-/* Glassmorphism Card Style */
-.glass-panel {
-  background: rgba(20, 26, 20, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(31, 43, 31, 0.9);
+/* Card & Surface styling */
+.fb-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px 0 rgba(15, 23, 42, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-panel-hover {
-  transition: all 0.2s ease-in-out;
-}
-.glass-panel-hover:hover {
-  border-color: rgba(34, 197, 94, 0.35);
-  box-shadow: 0 8px 32px rgba(22, 163, 74, 0.08);
+.fb-card-hover:hover {
+  border-color: #FDBA74;
+  box-shadow: 0 10px 25px -5px rgba(234, 88, 12, 0.12), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
+  transform: translateY(-2px);
 }
 
-/* Leaflet Map overrides for dark theme */
+.fb-card-navy {
+  background: linear-gradient(135deg, #0F172A 0%, #020617 100%);
+  border: 1px solid #1E293B;
+  border-radius: 16px;
+  color: #FFFFFF;
+  box-shadow: 0 10px 25px -5px rgba(2, 6, 23, 0.3);
+}
+
+/* Touch targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Leaflet Map overrides for modern crisp light theme */
 .leaflet-container {
-  background: #0d140d !important;
-  border-radius: 0.75rem;
-  z-index: 1;
+  background: #F1F5F9 !important;
+  border-radius: 16px;
+  font-family: inherit !important;
+  z-index: 10;
 }
-.leaflet-tile {
-  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7) !important;
+
+.leaflet-popup-content-wrapper {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  border-radius: 14px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 15px 30px -5px rgba(15, 23, 42, 0.15) !important;
+  padding: 6px !important;
 }
-.leaflet-popup-content-wrapper, .leaflet-popup-tip {
-  background: #141a14 !important;
-  color: #e8f0e8 !important;
-  border: 1px solid #2a3a2a !important;
+
+.leaflet-popup-tip {
+  background: #FFFFFF !important;
+}
+
+/* Animation helpers */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
