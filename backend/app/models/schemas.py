@@ -25,6 +25,7 @@ class SurplusListingCreate(BaseModel):
     special_instructions: Optional[str] = "Loading dock at rear service entrance."
     latitude: float
     longitude: float
+    photo_url: Optional[str] = None
 
 # 2. AI Freshness & Eligibility Evaluation Response
 class FreshnessEvaluationResult(BaseModel):
@@ -62,6 +63,7 @@ class SurplusListingResponse(BaseModel):
     created_at: datetime
     matched_ngo: Optional[str] = None
     pickup_deadline: Optional[datetime] = None
+    photo_url: Optional[str] = None
 
 # ==============================================================================
 # 4. Multi-Recipient Allocation Models

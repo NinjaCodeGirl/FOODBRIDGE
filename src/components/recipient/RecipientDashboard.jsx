@@ -449,8 +449,24 @@ export default function RecipientDashboard({
               </div>
             ) : (
               filteredListings.map((item) => (
-                <div key={item.id} className="fb-card fb-card-hover p-6 flex flex-col justify-between space-y-4">
+                <div key={item.id} className="fb-card fb-card-hover p-5 sm:p-6 flex flex-col justify-between space-y-4">
                   
+                  {/* Photo Preview if available */}
+                  {item.photo_url && (
+                    <div className="relative w-full h-44 rounded-xl overflow-hidden bg-gray-100 -mt-1 shadow-inner">
+                      <img 
+                        src={item.photo_url} 
+                        alt={item.food_title} 
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                      <div className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-sm text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>AI Verified: {item.freshness_score}%</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Top: Donor & Tag */}
                   <div className="flex items-start justify-between">
                     <div>

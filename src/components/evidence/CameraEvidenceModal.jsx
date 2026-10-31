@@ -185,8 +185,11 @@ export default function CameraEvidenceModal({
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setCapturedPhotoUrl(url);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setCapturedPhotoUrl(ev.target?.result);
+      };
+      reader.readAsDataURL(file);
       setCapturedBlob(file);
       const hash = await computeSha256(file);
       setEvidenceHash(hash);
@@ -225,7 +228,7 @@ export default function CameraEvidenceModal({
           formData.append('uploader_notes', evidenceNotes);
         }
 
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : (import.meta.env.DEV ? 'http://localhost:8000' : '');
         const res = await fetch(`${apiUrl}/api/evidence/upload`, {
           method: 'POST',
           body: formData

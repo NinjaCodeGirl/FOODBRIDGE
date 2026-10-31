@@ -40,7 +40,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : (import.meta.env.DEV ? 'http://localhost:8000' : '');
 
 const INITIAL_LISTINGS = [
   {
@@ -64,6 +64,7 @@ const INITIAL_LISTINGS = [
     pickup_address: 'NSUT Main Campus, Sector 3, Dwarka, New Delhi',
     latitude: 28.6100,
     longitude: 77.0380,
+    photo_url: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80',
     created_at: new Date(Date.now() - 3600 * 1000).toISOString()
   },
   {
@@ -87,6 +88,7 @@ const INITIAL_LISTINGS = [
     pickup_address: 'Sardar Patel Marg, Diplomatic Enclave, New Delhi',
     latitude: 28.5975,
     longitude: 77.1724,
+    photo_url: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&auto=format&fit=crop&q=80',
     created_at: new Date(Date.now() - 7200 * 1000).toISOString()
   },
   {
@@ -110,6 +112,7 @@ const INITIAL_LISTINGS = [
     pickup_address: 'Sector 6 Dwarka, New Delhi',
     latitude: 28.5861,
     longitude: 77.0789,
+    photo_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80',
     created_at: new Date(Date.now() - 14400 * 1000).toISOString()
   }
 ];

@@ -1,32 +1,68 @@
 import hashlib
 import json
 import logging
+import base64
 from datetime import datetime, timezone
+import requests
 from app.config import settings
 from app.models.schemas import FreshnessEvaluationResult
 
 logger = logging.getLogger(__name__)
 
-# Attempt to configure Gemini AI client with fallback model list
+# Direct lightweight REST helper for Gemini API
+def call_gemini_rest(prompt: str, image_bytes: bytes = None, mime_type: str = "image/jpeg") -> str:
+    if not settings.GEMINI_API_KEY:
+        return ""
+    
+    # Try gemini-1.5-flash or gemini-2.0-flash
+    for model_name in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={settings.GEMINI_API_KEY}"
+        parts = [{"text": prompt}]
+        if image_bytes:
+            parts.append({
+                "inline_data": {
+                    "mime_type": mime_type,
+                    "data": base64.b64encode(image_bytes).decode("utf-8")
+                }
+            })
+        payload = {
+            "contents": [{"parts": parts}],
+            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 600}
+        }
+        try:
+            resp = requests.post(url, json=payload, timeout=8)
+            if resp.status_code == 200:
+                data = resp.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        return parts[0].get("text", "").strip()
+        except Exception as e:
+            logger.debug(f"Gemini REST attempt {model_name} failed: {e}")
+            continue
+    return ""
+
+# Attempt to configure Gemini AI client if google.generativeai is present
 gemini_model = None
 if settings.GEMINI_API_KEY:
     try:
         import google.generativeai as genai
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        for model_candidate in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro']:
+        for model_candidate in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest']:
             try:
                 gemini_model = genai.GenerativeModel(model_candidate)
                 break
             except Exception:
                 continue
     except Exception as e:
-        logger.warning(f"Could not initialize Gemini AI model: {e}")
+        logger.debug(f"google.generativeai SDK skipped (using direct REST client): {e}")
 
 class AzureFreshnessAIEngine:
     """
     AI-Powered Freshness & Shelf-Life Assessment Service.
-    Combines Gemini AI natural language food inspection with physical temperature
-    decay curves to evaluate remaining shelf life, allergen tags, and safety scores.
+    Combines Gemini AI food inspection with physical temperature decay curves
+    to evaluate remaining shelf life, allergen tags, and safety scores.
     """
     
     BASE_SHELF_LIFE = {
@@ -67,7 +103,7 @@ class AzureFreshnessAIEngine:
         
         # Category B (Cold Chain Required) penalty if stored at room temp
         if classification == "CATEGORY_B" and storage_condition == "ROOM_TEMP":
-            multiplier *= 0.4 # Significant shelf life drop for cold-chain items left out
+            multiplier *= 0.4
             
         total_shelf_life = base * multiplier
         remaining_hours = max(0.0, total_shelf_life - elapsed_hours)
@@ -88,23 +124,33 @@ class AzureFreshnessAIEngine:
         if any(w in lower_title for w in ["egg", "omelette"]):
             allergens.append("Egg")
 
-        # Try enhancing via Gemini AI if available
+        # Try enhancing via Gemini AI (SDK or REST)
         gemini_recommendation = None
         gemini_risk = None
+        prompt = (
+            f"Analyze this surplus food donation for safety and freshness assessment:\n"
+            f"Food Item: {food_title}\n"
+            f"Category: {food_category}\n"
+            f"Storage: {storage_condition}\n"
+            f"Hours since preparation: {round(elapsed_hours, 1)}\n\n"
+            f"Respond ONLY in raw valid JSON format with keys:\n"
+            f'{{"ai_score_adjustment": 0, "risk_level": "LOW|MEDIUM|HIGH|CRITICAL", '
+            f'"allergens": ["Gluten", "Dairy"], "recommendation": "Short safety advice text"}}'
+        )
+
+        resp_text = ""
         if gemini_model:
             try:
-                prompt = (
-                    f"Analyze this surplus food donation for safety and freshness assessment:\n"
-                    f"Food Item: {food_title}\n"
-                    f"Category: {food_category}\n"
-                    f"Storage: {storage_condition}\n"
-                    f"Hours since preparation: {round(elapsed_hours, 1)}\n\n"
-                    f"Respond ONLY in raw valid JSON format with keys:\n"
-                    f'{{"ai_score_adjustment": 0, "risk_level": "LOW|MEDIUM|HIGH|CRITICAL", '
-                    f'"allergens": ["Gluten", "Dairy"], "recommendation": "Short safety advice text"}}'
-                )
                 response = gemini_model.generate_content(prompt)
                 resp_text = response.text.strip()
+            except Exception:
+                pass
+        
+        if not resp_text and settings.GEMINI_API_KEY:
+            resp_text = call_gemini_rest(prompt)
+
+        if resp_text:
+            try:
                 if "```json" in resp_text:
                     resp_text = resp_text.split("```json")[1].split("```")[0].strip()
                 elif "```" in resp_text:
@@ -119,7 +165,7 @@ class AzureFreshnessAIEngine:
                 gemini_recommendation = ai_json.get("recommendation")
                 gemini_risk = ai_json.get("risk_level")
             except Exception as e:
-                logger.warning(f"Gemini API evaluation skipped: {e}")
+                logger.debug(f"Gemini response parsing skipped: {e}")
 
         # Categorize Safety & Risk
         if score >= 75.0:
@@ -178,49 +224,61 @@ class AzureFreshnessAIEngine:
             classification=classification
         )
 
-        if not gemini_model or not image_bytes:
+        if not image_bytes:
             return base_result
 
-        try:
-            image_part = {
-                "mime_type": mime_type,
-                "data": image_bytes
-            }
-            prompt = (
-                f"Inspect this food donation photograph for surplus redistribution safety:\n"
-                f"Claimed Food Item: {food_title}\n"
-                f"Category: {food_category}\n"
-                f"Storage Condition: {storage_condition}\n"
-                f"Classification: {classification}\n\n"
-                f"Check for signs of spoilage, container cleanliness, condensation, and packaging integrity.\n"
-                f"Respond ONLY in valid raw JSON with keys:\n"
-                f'{{"visual_safety_pass": true, "spoilage_detected": false, "freshness_score": 92.0, "risk_level": "LOW", '
-                f'"allergens": ["Gluten", "Dairy"], "inspector_notes": "Clean sealed containers, food looks fresh."}}'
-            )
-            response = gemini_model.generate_content([prompt, image_part])
-            resp_text = response.text.strip()
-            if "```json" in resp_text:
-                resp_text = resp_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in resp_text:
-                resp_text = resp_text.split("```")[1].split("```")[0].strip()
+        prompt = (
+            f"Inspect this food donation photograph for surplus redistribution safety:\n"
+            f"Claimed Food Item: {food_title}\n"
+            f"Category: {food_category}\n"
+            f"Storage Condition: {storage_condition}\n"
+            f"Classification: {classification}\n\n"
+            f"Check for signs of spoilage, container cleanliness, condensation, and packaging integrity.\n"
+            f"Respond ONLY in valid raw JSON with keys:\n"
+            f'{{"visual_safety_pass": true, "spoilage_detected": false, "freshness_score": 92.0, "risk_level": "LOW", '
+            f'"allergens": ["Gluten", "Dairy"], "inspector_notes": "Clean sealed containers, food looks fresh."}}'
+        )
 
-            ai_data = json.loads(resp_text)
-            ai_score = float(ai_data.get("freshness_score", base_result.freshness_score))
-            risk_level = ai_data.get("risk_level", base_result.risk_level)
-            allergens = list(set(base_result.allergens + ai_data.get("allergens", [])))
-            notes = ai_data.get("inspector_notes", base_result.ai_recommendation)
+        resp_text = ""
+        if gemini_model:
+            try:
+                image_part = {
+                    "mime_type": mime_type,
+                    "data": image_bytes
+                }
+                response = gemini_model.generate_content([prompt, image_part])
+                resp_text = response.text.strip()
+            except Exception:
+                pass
 
-            return FreshnessEvaluationResult(
-                freshness_score=round(ai_score, 2),
-                estimated_shelf_life_hours=base_result.estimated_shelf_life_hours,
-                safety_category="HIGHLY_FRESH" if ai_score >= 75 else ("MODERATE_RESCUE" if ai_score >= 45 else "URGENT_DISPATCH"),
-                risk_level=risk_level,
-                allergens=allergens,
-                validation_hash=base_result.validation_hash,
-                ai_recommendation=f"Gemini Visual Inspection: {notes}",
-                ai_source="GEMINI_MULTIMODAL_API",
-                ai_verified=True
-            )
-        except Exception as e:
-            logger.warning(f"Gemini Multimodal evaluation failed, falling back to deterministic model: {e}")
-            return base_result
+        if not resp_text and settings.GEMINI_API_KEY:
+            resp_text = call_gemini_rest(prompt, image_bytes=image_bytes, mime_type=mime_type)
+
+        if resp_text:
+            try:
+                if "```json" in resp_text:
+                    resp_text = resp_text.split("```json")[1].split("```")[0].strip()
+                elif "```" in resp_text:
+                    resp_text = resp_text.split("```")[1].split("```")[0].strip()
+
+                ai_data = json.loads(resp_text)
+                ai_score = float(ai_data.get("freshness_score", base_result.freshness_score))
+                risk_level = ai_data.get("risk_level", base_result.risk_level)
+                allergens = list(set(base_result.allergens + ai_data.get("allergens", [])))
+                notes = ai_data.get("inspector_notes", base_result.ai_recommendation)
+
+                return FreshnessEvaluationResult(
+                    freshness_score=round(ai_score, 2),
+                    estimated_shelf_life_hours=base_result.estimated_shelf_life_hours,
+                    safety_category="HIGHLY_FRESH" if ai_score >= 75 else ("MODERATE_RESCUE" if ai_score >= 45 else "URGENT_DISPATCH"),
+                    risk_level=risk_level,
+                    allergens=allergens,
+                    validation_hash=base_result.validation_hash,
+                    ai_recommendation=f"Gemini Visual Inspection: {notes}",
+                    ai_source="GEMINI_MULTIMODAL_API",
+                    ai_verified=True
+                )
+            except Exception as e:
+                logger.debug(f"Gemini multimodal parsing failed: {e}")
+
+        return base_result

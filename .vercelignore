@@ -1,15 +1,15 @@
-# Exclude Python backend - Vercel only serves the React frontend
-backend/
-*.py
-*.pyc
+frontend/
+Union_FoodBridge_Complete_Project.zip
+*.zip
+node_modules/
+dist/
+.git/
+tests/
+database/
+*.md
+*.log
 __pycache__/
+*.pyc
 .pytest_cache/
-*.egg-info/
 venv/
 .venv/
-node_modules/
-.git/
-*.log
-*.md
-tests/
-docs/

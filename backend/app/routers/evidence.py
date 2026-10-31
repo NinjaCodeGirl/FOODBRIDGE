@@ -9,9 +9,12 @@ from app.security import get_current_user
 
 router = APIRouter(prefix="/api/evidence", tags=["Evidence & Media Upload Ledger"])
 
-# Upload directory configuration
+# Upload directory configuration (supports serverless /tmp writable storage)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+if os.getenv("VERCEL") or not os.access(BASE_DIR, os.W_OK):
+    UPLOAD_DIR = os.path.join("/tmp", "uploads")
+else:
+    UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Permitted MIME types and maximum 25 MB size limit

@@ -38,9 +38,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static File Storage for Verified Evidence Media
+# Static File Storage for Verified Evidence Media (supports serverless /tmp)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
+if os.getenv("VERCEL") or not os.access(BASE_DIR, os.W_OK):
+    UPLOADS_DIR = os.path.join("/tmp", "uploads")
+else:
+    UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 

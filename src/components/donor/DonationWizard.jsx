@@ -284,6 +284,7 @@ export default function DonationWizard({
       estimated_shelf_life_hours: shelfLifeHours,
       validation_hash: `0x${Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
       status: isDraft ? 'DRAFT' : 'POSTED',
+      photo_url: formData.photo_url || null,
       created_at: new Date().toISOString()
     };
 

@@ -33,7 +33,8 @@ SURPLUS_DB = [
         "pickup_address": "NSUT Main Campus, Sector 3, Dwarka, New Delhi",
         "latitude": 28.6100,
         "longitude": 77.0380,
-        "created_at": datetime.now(timezone.utc)
+        "photo_url": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80",
+        "created_at": datetime.now(timezone.utc),
     },
     {
         "id": "list-002",
@@ -53,6 +54,7 @@ SURPLUS_DB = [
         "pickup_address": "Sardar Patel Marg, Diplomatic Enclave, New Delhi",
         "latitude": 28.5975,
         "longitude": 77.1724,
+        "photo_url": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&auto=format&fit=crop&q=80",
         "created_at": datetime.now(timezone.utc)
     }
 ]
@@ -101,7 +103,8 @@ def create_surplus_listing(listing: SurplusListingCreate):
         "longitude": listing.longitude,
         "pickup_deadline": listing.pickup_deadline or (datetime.now(timezone.utc) + timedelta(hours=eval_result.estimated_shelf_life_hours)),
         "safe_consumption_deadline": datetime.now(timezone.utc) + timedelta(hours=eval_result.estimated_shelf_life_hours),
-        "created_at": datetime.now(timezone.utc)
+        "created_at": datetime.now(timezone.utc),
+        "photo_url": listing.photo_url
     }
     SURPLUS_DB.insert(0, item)
     return item

@@ -126,7 +126,7 @@ export function AuthProvider({ children }) {
   // Login handler with backend verification and local fallback
   const login = async (email, password) => {
     const trimmedEmail = email.trim().toLowerCase();
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const apiUrl = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : (import.meta.env.DEV ? 'http://localhost:8000' : '');
 
     try {
       const res = await fetch(`${apiUrl}/api/auth/login`, {
@@ -186,7 +186,7 @@ export function AuthProvider({ children }) {
   // Register handler
   const register = async (registrationData) => {
     const trimmedEmail = registrationData.email.trim().toLowerCase();
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const apiUrl = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : (import.meta.env.DEV ? 'http://localhost:8000' : '');
 
     try {
       const res = await fetch(`${apiUrl}/api/auth/register`, {
