@@ -13,7 +13,7 @@ if settings.GEMINI_API_KEY:
     try:
         import google.generativeai as genai
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        for model_candidate in ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro']:
+        for model_candidate in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro']:
             try:
                 gemini_model = genai.GenerativeModel(model_candidate)
                 break

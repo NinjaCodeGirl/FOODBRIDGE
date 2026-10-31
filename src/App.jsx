@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import AppShell from './components/layout/AppShell';
-import Dashboard from './components/Dashboard';
+import LandingPage from './components/landing/LandingPage';
+import AuthModal from './components/auth/AuthModal';
 import DonorDashboard from './components/donor/DonorDashboard';
+import RecipientDashboard from './components/recipient/RecipientDashboard';
+import VolunteerDashboard from './components/volunteer/VolunteerDashboard';
+import AdminDashboard from './components/admin/AdminDashboard';
 import DonationWizard from './components/donor/DonationWizard';
-import DonationForm from './components/DonationForm';
 import PricingPage from './components/pricing/PricingPage';
 import SubscriptionManager from './components/subscription/SubscriptionManager';
-import AdminRevenueDashboard from './components/revenue/AdminRevenueDashboard';
-import UnitEconomicsDashboard from './components/revenue/UnitEconomicsDashboard';
 import ComplianceRecords from './components/compliance/ComplianceRecords';
 import SurplusFeed from './components/SurplusFeed';
 import LiveMap from './components/LiveMap';
@@ -18,9 +19,8 @@ import RatingModal from './components/RatingModal';
 import OnboardingModal from './components/OnboardingModal';
 import DonationTable from './components/ui/DonationTable';
 import PageHeader from './components/ui/PageHeader';
-import StatCard from './components/ui/StatCard';
 import UrgencyBanner from './components/ui/UrgencyBanner';
-import EmptyState from './components/ui/EmptyState';
+import { useAuth } from './context/AuthContext';
 import { 
   Split, 
   X, 
@@ -36,7 +36,8 @@ import {
   Settings as SettingsIcon,
   HelpCircle,
   Calendar,
-  Layers
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -123,10 +124,25 @@ const INITIAL_METRICS = {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [activeRole, setActiveRole] = useState('DONOR'); // 'DONOR', 'NGO', 'VOLUNTEER', 'ADMIN'
+  const { currentUser, role, isAuthenticated, switchRole, accounts } = useAuth();
 
-  // LocalStorage Persisted State
+  // Navigation & View State
+  // If user is authenticated, default view is 'dashboard'; if not, default view is 'landing'
+  const [viewMode, setViewMode] = useState(() => {
+    return isAuthenticated ? 'dashboard' : 'landing';
+  });
+
+  const [activeTab, setActiveTab] = useState('overview');
+  const [lang, setLang] = useState('en');
+
+  // Sync viewMode when auth changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      setViewMode('dashboard');
+    }
+  }, [isAuthenticated]);
+
+  // Listings & Metrics LocalStorage State
   const [listings, setListings] = useState(() => {
     try {
       const saved = localStorage.getItem('foodbridge_listings_v2');
@@ -160,7 +176,8 @@ export default function App() {
     } catch (e) {}
   };
 
-  // Modal States
+  // Modals State
+  const [authModalConfig, setAuthModalConfig] = useState({ isOpen: false, mode: 'login', role: 'DONOR' });
   const [contactModalListing, setContactModalListing] = useState(null);
   const [qrModalListing, setQrModalListing] = useState(null);
   const [ratingModalConfig, setRatingModalConfig] = useState(null);
@@ -168,6 +185,7 @@ export default function App() {
   const [splitModalListing, setSplitModalListing] = useState(null);
   const [splitResult, setSplitResult] = useState(null);
   const [splitLoading, setSplitLoading] = useState(false);
+  const [prefillDonationData, setPrefillDonationData] = useState(null);
 
   // Toast Notification
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -189,7 +207,7 @@ export default function App() {
     } catch (e) {}
   }, [liveMetrics]);
 
-  // Initial backend fetch attempt with graceful fallback
+  // Initial backend fetch with graceful offline fallback
   useEffect(() => {
     const fetchActiveListings = async () => {
       try {
@@ -231,7 +249,7 @@ export default function App() {
       total_food_saved_tonnes: Number((prev.total_food_saved_tonnes + ((newListing.weight_kg || 10) / 1000)).toFixed(2))
     }));
     showToast(`Donation posted successfully! ID: ${newListing.id}`);
-    setActiveTab(activeRole === 'DONOR' ? 'donations' : 'overview');
+    setActiveTab('donations');
   };
 
   const handleTriggerSplit = async (listing) => {
@@ -295,13 +313,10 @@ export default function App() {
     }
   };
 
-  // Quick Donate Again pre-fill state
-  const [prefillDonationData, setPrefillDonationData] = useState(null);
-
   const handleQuickDonateAgain = (item) => {
     setPrefillDonationData({
-      donor_name: item.donor_name || 'Taj Palace Banquet Kitchen',
-      donor_phone: item.donor_phone || '+91 98999 11223',
+      donor_name: item.donor_name || currentUser?.organizationName || 'Taj Palace Banquet Kitchen',
+      donor_phone: item.donor_phone || currentUser?.phone || '+91 98999 11223',
       food_title: item.food_title,
       food_category: item.food_category,
       classification: item.classification || 'CATEGORY_A',
@@ -317,17 +332,42 @@ export default function App() {
     showToast(`Pre-filled food details from previous donation: "${item.food_title}". Please confirm fresh preparation time.`);
   };
 
-  // Switch role handler: auto-switch to relevant home tab
-  const handleRoleChange = (newRole) => {
-    setActiveRole(newRole);
-    setActiveTab('overview');
-    showToast(`Switched workspace role to: ${newRole}`);
+  const openAuthModal = (mode = 'login', targetRole = 'DONOR') => {
+    setAuthModalConfig({ isOpen: true, mode, role: targetRole });
   };
+
+  // If visitor is viewing the Landing Page
+  if (viewMode === 'landing') {
+    return (
+      <>
+        <LandingPage
+          lang={lang}
+          setLang={setLang}
+          onOpenAuth={openAuthModal}
+          onNavigateToPricing={() => {
+            setViewMode('dashboard');
+            setActiveTab('pricing');
+          }}
+          metrics={liveMetrics}
+        />
+
+        <AuthModal
+          isOpen={authModalConfig.isOpen}
+          onClose={() => setAuthModalConfig({ isOpen: false, mode: 'login', role: 'DONOR' })}
+          initialMode={authModalConfig.mode}
+          initialRole={authModalConfig.role}
+        />
+      </>
+    );
+  }
+
+  // Active Role determination: fall back to DONOR if not authenticated or demo
+  const activeWorkspaceRole = role || 'DONOR';
 
   return (
     <AppShell
-      role={activeRole}
-      setRole={handleRoleChange}
+      role={activeWorkspaceRole}
+      setRole={switchRole}
       activeTab={activeTab}
       setActiveTab={setActiveTab}
       onOpenOnboarding={() => setShowOnboarding(true)}
@@ -338,255 +378,261 @@ export default function App() {
       currentPlan={currentPlan}
       onNavigateToSubscription={() => setActiveTab('subscription')}
       onNavigateToPricing={() => setActiveTab('pricing')}
+      onOpenAuth={openAuthModal}
+      onNavigateToLanding={() => setViewMode('landing')}
+      lang={lang}
+      setLang={setLang}
       toastMessage={toast.message}
       toastType={toast.type}
       onCloseToast={() => setToast({ message: '', type: 'success' })}
     >
-      {/* 1. OVERVIEW / DASHBOARD TAB */}
-      {activeTab === 'overview' && activeRole === 'DONOR' ? (
-        <DonorDashboard
-          donorName="Taj Palace Banquet Kitchen"
-          donations={listings}
-          onPostFood={() => {
-            setPrefillDonationData(null);
-            setActiveTab('post');
+      {/* 1. RESTAURANT / DONOR WORKSPACE */}
+      {activeWorkspaceRole === 'DONOR' && (
+        <>
+          {activeTab === 'overview' && (
+            <DonorDashboard
+              donorName={currentUser?.organizationName || 'Taj Palace Banquet Kitchen'}
+              donations={listings}
+              onPostFood={() => {
+                setPrefillDonationData(null);
+                setActiveTab('post');
+              }}
+              onViewDonation={(d) => showToast(`Viewing details for: ${d.food_title}`)}
+              onOpenQR={(d) => setQrModalListing(d)}
+              onOpenContact={(d) => setContactModalListing(d)}
+              onTrackPickup={() => setActiveTab('pickups')}
+              onViewFullImpact={() => setActiveTab('impact')}
+              onTriggerSplit={handleTriggerSplit}
+              onQuickDonateAgain={handleQuickDonateAgain}
+              currentPlan={currentPlan}
+              onNavigateToPricing={() => setActiveTab('pricing')}
+              onNavigateToSubscription={() => setActiveTab('subscription')}
+              onNavigateToCompliance={() => setActiveTab('compliance')}
+            />
+          )}
+
+          {activeTab === 'donations' && (
+            <div className="space-y-6">
+              <PageHeader
+                title="My Food Donations"
+                subtitle="Track live surplus listings, verification codes, and pickup status"
+                badge={`${listings.length} Active`}
+                action={
+                  <button
+                    onClick={() => setActiveTab('post')}
+                    className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shadow-orange touch-target"
+                  >
+                    <PlusCircle className="w-4 h-4 stroke-[2.5]" />
+                    <span>+ Post New Food</span>
+                  </button>
+                }
+              />
+
+              <UrgencyBanner
+                title="350 prepared meals — pickup deadline in 47 min"
+                subtitle="Robin Hood Army courier is en route to loading dock #2."
+                timeLeft="47 min left"
+                actionLabel="Track Pickup"
+                onAction={() => setActiveTab('pickups')}
+              />
+
+              <DonationTable
+                donations={listings}
+                onView={(d) => showToast(`Viewing details for: ${d.food_title}`)}
+                onOpenQR={(d) => setQrModalListing(d)}
+                onOpenContact={(d) => setContactModalListing(d)}
+                onTriggerSplit={handleTriggerSplit}
+                onQuickDonateAgain={handleQuickDonateAgain}
+                role={activeWorkspaceRole}
+              />
+            </div>
+          )}
+
+          {activeTab === 'post' && (
+            <DonationWizard
+              onListingCreated={handleListingCreated}
+              API_URL={API_URL}
+              initialData={prefillDonationData}
+              onCancel={() => setActiveTab('overview')}
+            />
+          )}
+
+          {activeTab === 'pickups' && (
+            <div className="space-y-6">
+              <PageHeader
+                title="Active Pickup & Transit Coordination"
+                subtitle="Coordinate courier dispatch, ETA tracking, and QR/OTP security handshakes"
+                badge="Live Dispatch"
+              />
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="fb-card p-6 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">In Transit</span>
+                      <h3 className="text-lg font-extrabold text-navy mt-1">Assorted Paneer Gravy & Rotis (350 servings)</h3>
+                      <p className="text-xs text-txt-secondary">{currentUser?.organizationName || 'Taj Palace Banquet Kitchen'} → Robin Hood Army Janakpuri</p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-orange-100 text-primary border border-orange-200 text-xs font-bold">
+                      ETA 18 min
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-surface-subtle text-xs space-y-1.5 border border-border">
+                    <div className="flex justify-between">
+                      <span className="text-txt-muted">Assigned Volunteer:</span>
+                      <span className="font-bold text-navy">Arjun Sharma (+91 98234 56789)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-txt-muted">Vehicle / Transport:</span>
+                      <span className="font-semibold text-txt-primary">Insulated Van (DL-3C-9821)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-txt-muted">Verification Mode:</span>
+                      <span className="font-bold text-primary">QR Handshake & 6-Digit OTP</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      onClick={() => setQrModalListing(listings[1] || listings[0])}
+                      className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-orange touch-target"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Verify Handover</span>
+                    </button>
+                    <button
+                      onClick={() => setContactModalListing(listings[1] || listings[0])}
+                      className="px-4 py-2.5 rounded-xl border border-border hover:bg-gray-50 text-txt-primary font-semibold text-xs touch-target"
+                    >
+                      <span>Call Courier</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="fb-card p-6 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-base font-extrabold text-navy mb-1">
+                      Legal Chain of Custody & Verification
+                    </h3>
+                    <p className="text-xs text-txt-secondary mb-4 leading-relaxed">
+                      FoodBridge uses cryptographic JWT tokens to prevent unauthorized claims and food diversion during transit.
+                    </p>
+
+                    <div className="space-y-3 text-xs">
+                      <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                        <Check className="w-4 h-4 text-status-success flex-shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-emerald-950 block">Step 1: Allocation Matched</strong>
+                          <span className="text-emerald-800 text-[11px]">Recipient NGO accepted allocation. Volunteer dispatched.</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-50 border border-orange-200">
+                        <Clock className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-orange-950 block">Step 2: Courier Handover</strong>
+                          <span className="text-orange-800 text-[11px]">Scan courier QR code or verify 6-digit OTP code at loading dock.</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
+                        <ShieldCheck className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-blue-950 block">Step 3: Verified Impact Issued</strong>
+                          <span className="text-blue-800 text-[11px]">2.5 kg CO₂ mitigated recorded in public audited ledger.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 2. RECIPIENT / NGO WORKSPACE */}
+      {activeWorkspaceRole === 'NGO' && (
+        <RecipientDashboard
+          ngoUser={currentUser}
+          listings={listings}
+          onRequestFood={(req) => {
+            showToast(`Food requested: ${req.requestedServings} servings reserved!`);
           }}
-          onViewDonation={(d) => showToast(`Viewing details for: ${d.food_title}`)}
-          onOpenQR={(d) => setQrModalListing(d)}
-          onOpenContact={(d) => setContactModalListing(d)}
-          onTrackPickup={() => setActiveTab('pickups')}
-          onViewFullImpact={() => setActiveTab('impact')}
+          onOpenQR={(item) => setQrModalListing(item)}
+          onOpenContact={(item) => setContactModalListing(item)}
+          onOpenRating={(item) => setRatingModalConfig({ listing: item, role: 'NGO' })}
           onTriggerSplit={handleTriggerSplit}
-          onQuickDonateAgain={handleQuickDonateAgain}
-          currentPlan={currentPlan}
-          onNavigateToPricing={() => setActiveTab('pricing')}
-          onNavigateToSubscription={() => setActiveTab('subscription')}
-          onNavigateToCompliance={() => setActiveTab('compliance')}
+          onShowToast={showToast}
         />
-      ) : activeTab === 'overview' ? (
-        <Dashboard
+      )}
+
+      {/* 3. VOLUNTEER / COURIER WORKSPACE */}
+      {activeWorkspaceRole === 'VOLUNTEER' && (
+        <VolunteerDashboard
+          volunteerUser={currentUser}
+          onOpenQR={(item) => setQrModalListing(item)}
+          onShowToast={showToast}
+        />
+      )}
+
+      {/* 4. PLATFORM ADMIN WORKSPACE */}
+      {activeWorkspaceRole === 'ADMIN' && (
+        <AdminDashboard
           metrics={liveMetrics}
-          onExploreListings={() => setActiveTab(activeRole === 'DONOR' ? 'donations' : 'find-food')}
-          onPostFood={activeRole === 'DONOR' ? () => {
-            setPrefillDonationData(null);
-            setActiveTab('post');
-          } : null}
-          role={activeRole}
-        />
-      ) : null}
-
-      {/* 2. DONOR: POST SURPLUS FOOD (4-STEP PROGRESSIVE WIZARD) */}
-      {activeTab === 'post' && (
-        <DonationWizard
-          onListingCreated={handleListingCreated}
-          API_URL={API_URL}
-          initialData={prefillDonationData}
-          onCancel={() => setActiveTab('overview')}
+          listings={listings}
+          accounts={accounts}
+          onShowToast={showToast}
         />
       )}
 
-      {/* 3. DONATIONS LIST / ACTIVE DONATIONS */}
-      {activeTab === 'donations' && (
+      {/* 5. COMMON TABS (Impact, Pricing, Subscription, Compliance, Settings) */}
+      {(activeTab === 'impact' || activeTab === 'leaderboard') && (
         <div className="space-y-6">
           <PageHeader
-            title="My Food Donations"
-            subtitle="Track live surplus listings, verification codes, and pickup status"
-            badge={`${listings.length} Active`}
-            action={
-              <button
-                onClick={() => setActiveTab('post')}
-                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm touch-target"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>+ Post New Food</span>
-              </button>
-            }
-          />
-
-          {/* Urgency Section */}
-          <UrgencyBanner
-            title="40 prepared meals — pickup deadline in 47 min"
-            subtitle="Akshaya Patra Foundation courier is en route to NSUT Gate 3."
-            timeLeft="47 min left"
-            actionLabel="Track Pickup"
-            onAction={() => setActiveTab('pickups')}
-          />
-
-          <DonationTable
-            donations={listings}
-            onView={(d) => showToast(`Viewing details for: ${d.food_title}`)}
-            onOpenQR={(d) => setQrModalListing(d)}
-            onOpenContact={(d) => setContactModalListing(d)}
-            onTriggerSplit={handleTriggerSplit}
-            onQuickDonateAgain={handleQuickDonateAgain}
-            role={activeRole}
-          />
-        </div>
-      )}
-
-      {/* 4. NGO: FIND FOOD / SURPLUS FEED */}
-      {(activeTab === 'find-food' || activeTab === 'feed') && (
-        <div className="space-y-6">
-          <PageHeader
-            title="Available Food Near You"
-            subtitle="Surplus meals available for verified distribution shelters in Delhi NCR"
-            badge={`${listings.filter(l => l.status !== 'DELIVERED').length} Available`}
-          />
-          <SurplusFeed
-            listings={listings}
-            onTriggerSplit={handleTriggerSplit}
-            onOpenContactModal={(listing) => setContactModalListing(listing)}
-            onOpenQRModal={(listing) => setQrModalListing(listing)}
-            onOpenRatingModal={(listing) => setRatingModalConfig({ listing, role: activeRole })}
-          />
-        </div>
-      )}
-
-      {/* 5. PICKUPS & TRANSIT COORDINATION */}
-      {activeTab === 'pickups' && (
-        <div className="space-y-6">
-          <PageHeader
-            title={activeRole === 'VOLUNTEER' ? 'Available Pickups & Assignments' : 'Active Pickup Coordination'}
-            subtitle="Coordinate courier dispatch, ETA tracking, and QR/OTP security handshakes"
-            badge="Live Dispatch"
-          />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Active Pickup Card */}
-            <div className="fb-card p-6 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">In Transit</span>
-                  <h3 className="text-lg font-bold text-txt-primary mt-1">Assorted Paneer Gravy & Rotis (350 servings)</h3>
-                  <p className="text-xs text-txt-secondary">Taj Palace Banquet Kitchen → Robin Hood Army Janakpuri</p>
-                </div>
-                <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold">
-                  ETA 22 min
-                </span>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span>Transit Status</span>
-                  <span className="text-primary">Courier Assigned</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                  <div className="bg-primary h-2.5 rounded-full w-2/3 transition-all duration-500" />
-                </div>
-                <div className="flex justify-between text-[11px] text-txt-secondary">
-                  <span>Accepted 12:45 PM</span>
-                  <span>Pickup 1:15 PM</span>
-                  <span>Est. Delivery 1:40 PM</span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-surface-subtle text-xs space-y-1 border border-border">
-                <div className="flex justify-between">
-                  <span className="text-txt-secondary">Assigned Volunteer:</span>
-                  <span className="font-bold text-txt-primary">Arjun Sharma (+91 98234 56789)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-txt-secondary">Vehicle / Transport:</span>
-                  <span className="font-semibold text-txt-primary">Insulated Van (DL-3C-9821)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-txt-secondary">Verification Mode:</span>
-                  <span className="font-semibold text-primary">QR Handshake & 6-Digit OTP</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  onClick={() => setQrModalListing(listings[1] || listings[0])}
-                  className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm touch-target"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Verify Handover</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('map')}
-                  className="px-4 py-2.5 rounded-xl border border-border hover:bg-gray-50 text-txt-primary font-semibold text-xs flex items-center gap-1.5 touch-target"
-                >
-                  <span>Route Map</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Pickups Timeline & Verification Overview */}
-            <div className="fb-card p-6 flex flex-col justify-between">
-              <div>
-                <h3 className="text-base font-bold text-txt-primary mb-1">
-                  Handover Verification Process
-                </h3>
-                <p className="text-xs text-txt-secondary mb-4 leading-relaxed">
-                  FoodBridge utilizes server-side cryptographic tokens to prevent double claims and food diversion during pickup.
-                </p>
-
-                <div className="space-y-3 text-xs">
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                    <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-emerald-950 block">Step 1: Allocation Confirmed</span>
-                      <span className="text-emerald-800 text-[11px]">Recipient NGO accepts allocation within pickup window.</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50/70 border border-amber-200">
-                    <Clock className="w-4 h-4 text-status-warning flex-shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-amber-950 block">Step 2: Volunteer Dispatch</span>
-                      <span className="text-amber-800 text-[11px]">Certified courier arrives at commercial kitchen.</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50/70 border border-blue-200">
-                    <ShieldCheck className="w-4 h-4 text-status-info flex-shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-blue-950 block">Step 3: Secure Handshake</span>
-                      <span className="text-blue-800 text-[11px]">Donor scans volunteer QR code or enters 6-digit OTP.</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-border text-[11px] text-txt-secondary text-center">
-                Estimated routes and arrival times are calculated via proximity matrices.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 6. LIVE PROXIMITY MAP */}
-      {activeTab === 'map' && (
-        <div className="space-y-6">
-          <PageHeader
-            title="Surplus Proximity & Route Map"
-            subtitle="Geographical distribution of active surplus listings and registered shelters across Delhi NCR"
-            badge="Live Geocoding"
-          />
-          <LiveMap
-            listings={listings}
-            onOpenContactModal={(listing) => setContactModalListing(listing)}
-            onTriggerSplit={handleTriggerSplit}
-          />
-        </div>
-      )}
-
-      {/* 7. IMPACT & LEADERBOARDS */}
-      {(activeTab === 'impact' || activeTab === 'analytics' || activeTab === 'leaderboard') && (
-        <div className="space-y-6">
-          <PageHeader
-            title="Environmental & Civic Impact"
-            subtitle="Verified food diversion, carbon mitigation, and community trust metrics"
+            title="Environmental & Civic Impact Ledger"
+            subtitle="Audited food diversion, carbon offset certificates, and community trust metrics"
             badge="Audited Ledger"
           />
           <Leaderboard />
         </div>
       )}
 
-      {/* 8. NOTIFICATIONS */}
+      {activeTab === 'pricing' && (
+        <PricingPage
+          currentPlan={currentPlan}
+          onSelectPlan={(planId) => {
+            handleUpdatePlan(planId);
+            showToast(`Subscription plan updated to ${planId.replace(/_/g, ' ')}!`);
+            setActiveTab('subscription');
+          }}
+          onOpenEnterpriseModal={() => {
+            showToast('Enterprise quotation request submitted to sales queue!');
+          }}
+          role={activeWorkspaceRole}
+        />
+      )}
+
+      {activeTab === 'subscription' && (
+        <SubscriptionManager
+          currentPlan={currentPlan}
+          onNavigateToPricing={() => setActiveTab('pricing')}
+          onDowngradeToFree={() => {
+            handleUpdatePlan('COMMUNITY_FREE');
+            showToast('Downgraded to Community Free. Food donation remains 100% active!');
+          }}
+          orgName={currentUser?.organizationName || 'Taj Palace Banquet Kitchen'}
+        />
+      )}
+
+      {activeTab === 'compliance' && activeWorkspaceRole !== 'ADMIN' && (
+        <ComplianceRecords
+          listings={listings}
+          role={activeWorkspaceRole}
+        />
+      )}
+
       {activeTab === 'notifications' && (
         <div className="space-y-6">
           <PageHeader
@@ -598,24 +644,24 @@ export default function App() {
           <div className="space-y-3">
             {[
               { id: 1, title: 'Donation Matched with Akshaya Patra', desc: '180 servings of Dal Makhani matched with Akshaya Patra Foundation.', time: '12 min ago', unread: true },
-              { id: 2, title: 'Courier En Route to Taj Palace', desc: 'Arjun Sharma (Van DL-3C-9821) is 15 minutes away for pickup.', time: '28 min ago', unread: true },
+              { id: 2, title: 'Courier En Route to Kitchen', desc: 'Arjun Sharma (Van DL-3C-9821) is 15 minutes away for pickup.', time: '28 min ago', unread: true },
               { id: 3, title: 'Handover Verified for Bikanervala Sweets', desc: '120 servings delivered to Feeding India Shelter. 90 kg CO2 mitigated.', time: '2 hours ago', unread: false },
               { id: 4, title: 'New Trust Rating Received', desc: 'Akshaya Patra Foundation rated your kitchen 5 stars for hygiene.', time: 'Yesterday', unread: false }
             ].map((n) => (
               <div 
                 key={n.id}
                 className={`p-4 rounded-xl border transition-all flex items-start justify-between gap-3 ${
-                  n.unread ? 'bg-primary-light/20 border-primary/30' : 'bg-white border-border'
+                  n.unread ? 'bg-orange-50/50 border-orange-200' : 'bg-white border-border'
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    n.unread ? 'bg-primary text-white' : 'bg-gray-100 text-txt-secondary'
+                    n.unread ? 'bg-primary text-white' : 'bg-surface-subtle text-txt-secondary'
                   }`}>
                     <Bell className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-txt-primary">{n.title}</h4>
+                    <h4 className="text-xs sm:text-sm font-bold text-navy">{n.title}</h4>
                     <p className="text-xs text-txt-secondary mt-0.5">{n.desc}</p>
                     <span className="text-[10px] text-txt-muted block mt-1">{n.time}</span>
                   </div>
@@ -629,18 +675,17 @@ export default function App() {
         </div>
       )}
 
-      {/* 9. SETTINGS & PROFILE */}
-      {(activeTab === 'settings' || activeTab === 'profile') && (
+      {activeTab === 'settings' && (
         <div className="space-y-6">
           <PageHeader
             title="Organization & Account Settings"
-            subtitle="Manage your profile, storage capabilities, notification channels, and verification credentials"
-            badge={activeRole}
+            subtitle="Manage your profile, cold storage capabilities, notification channels, and FSSAI credentials"
+            badge={activeWorkspaceRole}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="fb-card p-6 space-y-4">
-              <h3 className="text-sm font-bold text-txt-primary flex items-center gap-2">
+              <h3 className="text-sm font-extrabold text-navy flex items-center gap-2">
                 <SettingsIcon className="w-4 h-4 text-primary" />
                 <span>Organization Details</span>
               </h3>
@@ -651,8 +696,8 @@ export default function App() {
                   <input
                     type="text"
                     disabled
-                    value={activeRole === 'DONOR' ? 'Taj Palace Banquet Kitchen' : activeRole === 'NGO' ? 'Akshaya Patra Foundation' : 'Arjun Courier Service'}
-                    className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-subtle border border-border text-txt-primary font-semibold"
+                    value={currentUser?.organizationName || 'Taj Palace Banquet Kitchen'}
+                    className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-subtle border border-border text-navy font-bold"
                   />
                 </div>
                 <div>
@@ -660,7 +705,7 @@ export default function App() {
                   <input
                     type="text"
                     disabled
-                    value="Sardar Patel Marg, Diplomatic Enclave, New Delhi"
+                    value={currentUser?.address || 'Sardar Patel Marg, Diplomatic Enclave, New Delhi'}
                     className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-subtle border border-border text-txt-primary"
                   />
                 </div>
@@ -669,22 +714,22 @@ export default function App() {
                   <input
                     type="text"
                     disabled
-                    value="+91 98999 11223"
-                    className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-subtle border border-border text-txt-primary font-semibold"
+                    value={currentUser?.phone || '+91 98999 11223'}
+                    className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-subtle border border-border text-navy font-bold"
                   />
                 </div>
               </div>
             </div>
 
             <div className="fb-card p-6 space-y-4">
-              <h3 className="text-sm font-bold text-txt-primary flex items-center gap-2">
+              <h3 className="text-sm font-extrabold text-navy flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-primary" />
                 <span>Trust & Verification Status</span>
               </h3>
 
-              <div className="p-4 rounded-xl bg-primary-light/40 border border-primary-light flex items-center justify-between">
+              <div className="p-4 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-primary block">Trust Score: 4.96 / 5.0</span>
+                  <span className="text-xs font-bold text-primary block">Trust Score: 4.98 / 5.0</span>
                   <span className="text-[11px] text-txt-secondary">Verified by 34 pickup handshakes</span>
                 </div>
                 <span className="px-2.5 py-1 rounded-full bg-primary text-white text-xs font-bold shadow-sm">
@@ -693,7 +738,7 @@ export default function App() {
               </div>
 
               <div className="space-y-2 text-xs text-txt-secondary">
-                <p>✓ Government FSSAI & NGO registration validated</p>
+                <p>✓ Government FSSAI registration validated ({currentUser?.fssaiNumber || '10014011001890'})</p>
                 <p>✓ Temperature compliance holding audited</p>
                 <p>✓ 100% on-time pickup release record</p>
               </div>
@@ -702,115 +747,14 @@ export default function App() {
         </div>
       )}
 
-      {/* 10. CLAIMS & CAPACITY TABS FOR NGO */}
-      {activeTab === 'claims' && (
-        <div className="space-y-6">
-          <PageHeader
-            title="My Claimed Food Donations"
-            subtitle="Active allocations reserved for your shelter"
-            badge="1 Pending Pickup"
-          />
-          <DonationTable
-            donations={listings.slice(0, 2)}
-            onView={(d) => showToast(`Viewing claim for: ${d.food_title}`)}
-            onOpenQR={(d) => setQrModalListing(d)}
-            onOpenContact={(d) => setContactModalListing(d)}
-            role={activeRole}
-          />
-        </div>
-      )}
-
-      {activeTab === 'capacity' && (
-        <div className="space-y-6">
-          <PageHeader
-            title="Shelter Capacity & Intake Management"
-            subtitle="Configure daily intake thresholds and cold storage availability"
-            badge="Capacity: 85% Free"
-          />
-          <div className="fb-card p-6 space-y-4">
-            <h3 className="text-sm font-bold text-txt-primary">Daily Capacity Tracker</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-semibold">
-                <span>Active Intake (180 / 500 meals)</span>
-                <span className="text-primary">320 meals remaining today</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div className="bg-primary h-3 rounded-full w-[36%]" />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 11. HISTORY TAB FOR VOLUNTEER */}
-      {activeTab === 'history' && (
-        <div className="space-y-6">
-          <PageHeader
-            title="Volunteer Delivery History"
-            subtitle="Past completed surplus food rescues and verified handovers"
-            badge="14 Total Pickups"
-          />
-          <DonationTable
-            donations={listings.filter(l => l.status === 'DELIVERED')}
-            onView={(d) => showToast(`Viewing history for: ${d.food_title}`)}
-            role={activeRole}
-            emptyMessage="No completed pickup deliveries recorded yet."
-          />
-        </div>
-      )}
-
-      {/* 12. PRICING & SUBSCRIPTION TIERS */}
-      {activeTab === 'pricing' && (
-        <PricingPage
-          currentPlan={currentPlan}
-          onSelectPlan={(planId) => {
-            handleUpdatePlan(planId);
-            showToast(`Subscription plan updated to ${planId.replace(/_/g, ' ')}!`);
-            setActiveTab('subscription');
-          }}
-          onOpenEnterpriseModal={(inquiryData) => {
-            showToast('Enterprise quotation request submitted to sales queue!');
-          }}
-          role={activeRole}
-        />
-      )}
-
-      {/* 13. SUBSCRIPTION & BILLING GOVERNANCE */}
-      {activeTab === 'subscription' && (
-        <SubscriptionManager
-          currentPlan={currentPlan}
-          onNavigateToPricing={() => setActiveTab('pricing')}
-          onDowngradeToFree={() => {
-            handleUpdatePlan('COMMUNITY_FREE');
-            showToast('Downgraded to Community Free. Food donation remains 100% active!');
-          }}
-          orgName={activeRole === 'DONOR' ? 'Taj Palace Banquet Kitchen' : 'Akshaya Patra Foundation'}
-        />
-      )}
-
-      {/* 14. ADMIN REVENUE ANALYTICS */}
-      {activeTab === 'revenue' && (
-        <AdminRevenueDashboard
-          onNavigateToUnitEconomics={() => setActiveTab('unit-economics')}
-        />
-      )}
-
-      {/* 15. UNIT ECONOMICS SIMULATOR */}
-      {activeTab === 'unit-economics' && (
-        <UnitEconomicsDashboard
-          onNavigateToRevenue={() => setActiveTab('revenue')}
-        />
-      )}
-
-      {/* 16. COMPLIANCE & DONATION RECORDS */}
-      {activeTab === 'compliance' && (
-        <ComplianceRecords
-          listings={listings}
-          role={activeRole}
-        />
-      )}
-
       {/* MODALS */}
+      <AuthModal
+        isOpen={authModalConfig.isOpen}
+        onClose={() => setAuthModalConfig({ isOpen: false, mode: 'login', role: 'DONOR' })}
+        initialMode={authModalConfig.mode}
+        initialRole={authModalConfig.role}
+      />
+
       {contactModalListing && (
         <ContactSharingModal
           listing={contactModalListing}
@@ -833,7 +777,7 @@ export default function App() {
           initialRole={ratingModalConfig.role}
           onClose={() => setRatingModalConfig(null)}
           API_URL={API_URL}
-          onRatingSubmitted={() => showToast('Trust rating verified & recorded!')}
+          onRatingSubmitted={() => showToast('Trust rating verified & recorded in ledger!')}
         />
       )}
 
@@ -843,22 +787,22 @@ export default function App() {
 
       {/* Auto-Split Batch Modal */}
       {splitModalListing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-          <div className="fb-card w-full max-w-lg p-6 bg-white shadow-elevation relative space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-dark/75 backdrop-blur-sm animate-fadeIn">
+          <div className="fb-card w-full max-w-lg p-6 bg-white shadow-xl relative space-y-5 border border-border">
             <button
               onClick={() => { setSplitModalListing(null); setSplitResult(null); }}
-              className="absolute top-4 right-4 p-2 text-txt-secondary hover:text-txt-primary rounded-lg hover:bg-gray-100 transition-colors"
+              className="absolute top-4 right-4 p-2 text-txt-secondary hover:text-navy rounded-xl hover:bg-surface-subtle transition-colors"
               aria-label="Close auto-split modal"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
                 <Split className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-txt-primary">
+                <h3 className="font-extrabold text-base text-navy font-display">
                   Multi-NGO Algorithmic Batch Splitting
                 </h3>
                 <p className="text-xs text-txt-secondary">
@@ -876,7 +820,7 @@ export default function App() {
               <div className="space-y-4">
                 <div className="p-3.5 rounded-xl bg-surface-subtle border border-border text-xs flex justify-between items-center">
                   <span className="font-semibold text-txt-secondary">Total Batch Quantity:</span>
-                  <span className="font-bold text-primary text-sm">{splitResult.total_servings} Servings</span>
+                  <span className="font-extrabold text-primary text-sm">{splitResult.total_servings} Servings</span>
                 </div>
 
                 <div className="space-y-2.5">
@@ -886,7 +830,7 @@ export default function App() {
                   {splitResult.allocations.map((alloc, idx) => (
                     <div key={idx} className="p-3.5 rounded-xl border border-border hover:border-primary/40 bg-white transition-colors flex items-center justify-between gap-3 text-xs">
                       <div>
-                        <div className="font-bold text-txt-primary">{alloc.ngo_name}</div>
+                        <div className="font-extrabold text-navy">{alloc.ngo_name}</div>
                         <div className="text-[11px] text-txt-secondary mt-0.5">
                           ✓ {alloc.distance_km} km away • {alloc.estimated_transit_mins} min ETA
                         </div>
@@ -904,7 +848,7 @@ export default function App() {
                     setSplitModalListing(null);
                     showToast('Multi-NGO allocation batches assigned!');
                   }}
-                  className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-sm transition-all touch-target"
+                  className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-orange transition-all touch-target"
                 >
                   Confirm & Dispatch Batch Allocations
                 </button>

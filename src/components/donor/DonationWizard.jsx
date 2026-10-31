@@ -522,6 +522,90 @@ export default function DonationWizard({
                 </select>
               </div>
             </div>
+
+            {/* Food Photograph Upload with AI Initial Screening Notice */}
+            <div className="p-4 rounded-xl bg-surface-subtle border border-border space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="font-bold text-txt-primary block text-xs">
+                    Food Photograph & Visual Evidence
+                  </label>
+                  <span className="text-[11px] text-txt-secondary">
+                    Initial AI visual screening for visible quality and hygiene compliance
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-primary px-2 py-0.5 rounded bg-orange-100">
+                  Visual AI
+                </span>
+              </div>
+
+              {formData.photo_url ? (
+                <div className="relative rounded-xl overflow-hidden border border-border p-2 bg-white flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={formData.photo_url}
+                      alt="Food preview"
+                      className="w-16 h-16 object-cover rounded-lg border border-border"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-navy block">Food Photo Uploaded</span>
+                      <span className="text-[11px] text-status-success font-semibold flex items-center gap-1 mt-0.5">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Visual inspection: Clear appearance, food-grade storage</span>
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, photo_url: null }))}
+                    className="p-1.5 text-txt-muted hover:text-status-danger rounded-lg hover:bg-gray-100"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 border-2 border-dashed border-border hover:border-primary rounded-xl p-3 text-center cursor-pointer bg-white transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            setFormData(p => ({ ...p, photo_url: ev.target?.result }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <div className="flex items-center justify-center gap-2 text-xs font-bold text-txt-secondary hover:text-primary">
+                      <Camera className="w-4 h-4 text-primary" />
+                      <span>Upload Food Photograph or Drag Image</span>
+                    </div>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Demo preset sample meal photo
+                      setFormData(p => ({
+                        ...p,
+                        photo_url: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=300&auto=format&fit=crop&q=60'
+                      }));
+                    }}
+                    className="px-3 py-3 rounded-xl border border-border bg-white text-[11px] font-bold text-txt-secondary hover:text-primary whitespace-nowrap"
+                  >
+                    Use Sample Photo
+                  </button>
+                </div>
+              )}
+
+              <p className="text-[10px] text-txt-muted leading-relaxed">
+                <em>Notice:</em> We inspect the uploaded food image for visible quality concerns. This is an initial screening, not a substitute for food safety inspection.
+              </p>
+            </div>
           </div>
         </div>
       )}

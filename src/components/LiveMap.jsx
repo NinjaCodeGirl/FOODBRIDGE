@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import React, { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { MapPin, Navigation, Compass, Layers } from 'lucide-react';
 
 // Fix Leaflet Default Icon Path issues in React Vite builds
 delete L.Icon.Default.prototype._getIconUrl;
@@ -17,94 +18,155 @@ const createCustomIcon = (bgColor, labelText) => {
     html: `
       <div style="
         background: ${bgColor};
-        width: 34px;
-        height: 34px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         border: 2px solid #ffffff;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-weight: 700;
+        font-weight: 800;
         font-size: 11px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
         cursor: pointer;
       ">
         ${labelText}
       </div>
     `,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -17]
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18]
   });
 };
 
-const categoryAIcon = createCustomIcon('#16a34a', 'A');
-const categoryBIcon = createCustomIcon('#2563eb', 'B');
-const ngoIcon = createCustomIcon('#d97706', 'NGO');
+const categoryAIcon = createCustomIcon('#10B981', '🌾 A');
+const categoryBIcon = createCustomIcon('#3B82F6', '❄️ B');
+const ngoIcon = createCustomIcon('#EA580C', 'NGO');
+const userIcon = createCustomIcon('#6366F1', 'YOU');
 
-// Helper component to trigger map invalidateSize on render
-function MapResizer() {
+// Helper to trigger map size invalidation and re-center
+function MapController({ center, zoom }) {
   const map = useMap();
   useEffect(() => {
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 200);
-  }, [map]);
+    map.invalidateSize();
+    if (center) {
+      map.setView(center, zoom || 12);
+    }
+  }, [map, center, zoom]);
   return null;
 }
 
-export default function LiveMap({ listings, onOpenContactModal, onTriggerSplit }) {
-  const defaultCenter = [28.6100, 77.0500]; // Delhi NCR / Dwarka Focus
+export default function LiveMap({ 
+  listings = [], 
+  onOpenContactModal, 
+  onTriggerSplit, 
+  userCoords = null,
+  radiusKm = null 
+}) {
+  const [mapCenter, setMapCenter] = useState([28.6100, 77.0500]); // Delhi NCR center
+  const [activeUserPos, setActiveUserPos] = useState(userCoords || [28.6100, 77.0500]);
+  const [locating, setLocating] = useState(false);
 
   const ngoLocations = [
-    { id: 'ngo-101', name: 'Akshaya Patra Foundation Shelter', lat: 28.5833, lon: 77.0500, capacity: 200, phone: '+91 98101 23456' },
-    { id: 'ngo-102', name: 'Robin Hood Army Janakpuri', lat: 28.6219, lon: 77.0878, capacity: 150, phone: '+91 98234 56789' },
+    { id: 'ngo-101', name: 'Akshaya Patra Foundation Shelter', lat: 28.5833, lon: 77.0500, capacity: 500, phone: '+91 98101 23456' },
+    { id: 'ngo-102', name: 'Robin Hood Army Janakpuri', lat: 28.6219, lon: 77.0878, capacity: 250, phone: '+91 98234 56789' },
     { id: 'ngo-103', name: 'Feeding India Shelter Home', lat: 28.6254, lon: 77.0645, capacity: 180, phone: '+91 98345 67890' },
     { id: 'ngo-104', name: 'Roti Bank Community Kitchen', lat: 28.5861, lon: 77.0789, capacity: 100, phone: '+91 98456 78901' }
   ];
 
+  const handleLocateUser = () => {
+    if (navigator.geolocation) {
+      setLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const newPos = [pos.coords.latitude, pos.coords.longitude];
+          setActiveUserPos(newPos);
+          setMapCenter(newPos);
+          setLocating(false);
+        },
+        () => {
+          setLocating(false);
+        },
+        { timeout: 8000 }
+      );
+    }
+  };
+
   return (
-    <div className="space-y-4 animate-fadeIn">
-      {/* Header Bar */}
-      <div className="glass-panel p-4 rounded-xl border border-[#1f2b1f] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-        <div>
-          <h2 className="font-display font-bold text-xl text-white">Live Proximity Food Map</h2>
-          <p className="text-xs text-zinc-400">Interactive live pins for surplus food listings and nearby NGO shelters</p>
-        </div>
-
-        {/* Legend */}
-        <div className="flex items-center space-x-4 text-xs">
-          <div className="flex items-center space-x-1.5">
-            <span className="w-3 h-3 rounded-full bg-emerald-600 border border-white" />
-            <span className="text-zinc-300">Category A (Ambient)</span>
+    <div className="space-y-3 animate-fadeIn">
+      {/* Legend & Quick Geolocation Controls */}
+      <div className="fb-card p-3.5 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        {/* Map Legend */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-status-success border border-white shadow-sm" />
+            <span className="font-semibold text-txt-secondary">Category A (Ambient)</span>
           </div>
 
-          <div className="flex items-center space-x-1.5">
-            <span className="w-3 h-3 rounded-full bg-blue-600 border border-white" />
-            <span className="text-zinc-300">Category B (Cold Chain)</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-status-info border border-white shadow-sm" />
+            <span className="font-semibold text-txt-secondary">Category B (Cold Chain)</span>
           </div>
 
-          <div className="flex items-center space-x-1.5">
-            <span className="w-3 h-3 rounded-full bg-amber-600 border border-white" />
-            <span className="text-zinc-300">Verified NGO</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-primary border border-white shadow-sm" />
+            <span className="font-semibold text-txt-secondary">Verified NGO Shelter</span>
           </div>
         </div>
+
+        {/* Locate Me Button */}
+        <button
+          type="button"
+          onClick={handleLocateUser}
+          className="px-3 py-1.5 rounded-xl border border-border hover:bg-surface-subtle text-txt-primary font-bold text-xs flex items-center gap-1.5 transition-colors"
+        >
+          <Navigation className="w-3.5 h-3.5 text-primary" />
+          <span>{locating ? 'Detecting GPS...' : 'Locate My Position'}</span>
+        </button>
       </div>
 
       {/* Leaflet Map Box */}
-      <div className="glass-panel rounded-2xl overflow-hidden border border-[#1f2b1f] h-[550px] relative w-full">
+      <div className="fb-card rounded-2xl overflow-hidden border border-border h-[420px] sm:h-[500px] lg:h-[550px] relative w-full shadow-md">
         <MapContainer
-          center={defaultCenter}
+          center={mapCenter}
           zoom={12}
           scrollWheelZoom={true}
           style={{ height: '100%', width: '100%' }}
         >
-          <MapResizer />
+          <MapController center={mapCenter} zoom={12} />
+          
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+
+          {/* User Location Marker & Radius Circle */}
+          {activeUserPos && (
+            <>
+              <Marker position={activeUserPos} icon={userIcon}>
+                <Popup>
+                  <div className="p-1 font-bold text-xs text-navy">
+                    Your Location (GPS Center)
+                  </div>
+                </Popup>
+              </Marker>
+
+              {radiusKm && radiusKm !== 'ALL' && (
+                <Circle
+                  center={activeUserPos}
+                  radius={Number(radiusKm) * 1000}
+                  pathOptions={{
+                    fillColor: '#EA580C',
+                    fillOpacity: 0.08,
+                    color: '#EA580C',
+                    weight: 2,
+                    dashArray: '4, 8'
+                  }}
+                />
+              )}
+            </>
+          )}
 
           {/* Donor Food Listings Pins */}
           {listings.map((item) => (
@@ -114,38 +176,42 @@ export default function LiveMap({ listings, onOpenContactModal, onTriggerSplit }
               icon={item.classification === 'CATEGORY_B' ? categoryBIcon : categoryAIcon}
             >
               <Popup>
-                <div className="p-1 space-y-2 text-xs min-w-[200px]">
+                <div className="p-1 space-y-2 text-xs min-w-[210px]">
                   <div>
-                    <div className="font-bold text-sm text-emerald-400">{item.food_title}</div>
-                    <div className="font-semibold text-white">{item.donor_name}</div>
+                    <div className="font-extrabold text-sm text-navy">{item.food_title}</div>
+                    <div className="font-semibold text-primary">{item.donor_name}</div>
                   </div>
 
-                  <div className="text-zinc-300">
-                    {item.quantity_servings} Servings ({item.weight_kg} kg)
+                  <div className="text-txt-secondary">
+                    <strong>{item.quantity_servings} Servings</strong> ({item.weight_kg} kg)
                   </div>
 
-                  <div className="flex justify-between items-center text-[11px] text-zinc-400">
-                    <span>Score: <strong className="text-emerald-400">{item.freshness_score}%</strong></span>
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">
+                  <div className="flex justify-between items-center text-[11px] text-txt-muted">
+                    <span>AI Freshness: <strong className="text-status-success">{item.freshness_score}%</strong></span>
+                    <span className="px-1.5 py-0.5 rounded bg-orange-100 text-primary font-bold">
                       {item.classification === 'CATEGORY_B' ? 'Cold Chain' : 'Ambient'}
                     </span>
                   </div>
 
-                  <div className="text-zinc-400 font-mono text-[10px] truncate">{item.pickup_address}</div>
+                  <div className="text-txt-secondary text-[11px] truncate">{item.pickup_address}</div>
 
-                  <div className="pt-2 border-t border-zinc-800 flex gap-2">
-                    <button
-                      onClick={() => onOpenContactModal(item)}
-                      className="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-semibold"
-                    >
-                      Call / Contact
-                    </button>
-                    <button
-                      onClick={() => onTriggerSplit(item)}
-                      className="w-full py-1 bg-zinc-800 hover:bg-zinc-700 text-emerald-300 rounded text-[10px] font-semibold"
-                    >
-                      Auto-Split
-                    </button>
+                  <div className="pt-2 border-t border-border flex gap-2">
+                    {onOpenContactModal && (
+                      <button
+                        onClick={() => onOpenContactModal(item)}
+                        className="w-full py-1.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-[10px] font-bold shadow-sm"
+                      >
+                        Contact Donor
+                      </button>
+                    )}
+                    {onTriggerSplit && (
+                      <button
+                        onClick={() => onTriggerSplit(item)}
+                        className="w-full py-1.5 bg-surface-subtle hover:bg-gray-200 text-navy rounded-lg text-[10px] font-bold border border-border"
+                      >
+                        Auto-Split
+                      </button>
+                    )}
                   </div>
                 </div>
               </Popup>
@@ -161,10 +227,10 @@ export default function LiveMap({ listings, onOpenContactModal, onTriggerSplit }
             >
               <Popup>
                 <div className="p-1 space-y-1 text-xs">
-                  <div className="font-bold text-amber-400 text-sm">{ngo.name}</div>
-                  <div className="text-zinc-300">Verified NGO Shelter</div>
-                  <div className="text-zinc-400">Capacity: <strong>{ngo.capacity} Meals</strong></div>
-                  <div className="text-emerald-400 font-mono text-[11px]">📞 {ngo.phone}</div>
+                  <div className="font-extrabold text-navy text-sm">{ngo.name}</div>
+                  <div className="text-txt-secondary">Verified Shelter</div>
+                  <div className="text-txt-muted">Intake Capacity: <strong>{ngo.capacity} Meals</strong></div>
+                  <div className="text-primary font-mono font-bold text-[11px]">📞 {ngo.phone}</div>
                 </div>
               </Popup>
             </Marker>

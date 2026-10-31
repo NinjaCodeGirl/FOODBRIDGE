@@ -25,8 +25,11 @@ import {
   Info,
   Calendar,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Share2
 } from 'lucide-react';
+import { createWhatsAppLink, getPickupArrivalMessage } from '../../utils/whatsapp';
+import { useAuth } from '../../context/AuthContext';
 
 export default function DonorDashboard({
   donorName = 'Taj Palace Banquet Kitchen',
@@ -44,6 +47,8 @@ export default function DonorDashboard({
   onNavigateToSubscription,
   onNavigateToCompliance
 }) {
+  const { currentUser } = useAuth();
+  const displayDonorName = currentUser?.organizationName || donorName;
   // Derive operational statistics from actual database records
   const activeDonationsCount = donations.filter(d => 
     ['POSTED', 'MATCHED', 'UNDER_REVIEW', 'ACCEPTED', 'PICKUP_ASSIGNED'].includes(d.status)
@@ -127,15 +132,15 @@ export default function DonorDashboard({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-border">
         <div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-txt-primary tracking-tight">
-              Good morning, {donorName}
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-navy tracking-tight font-display">
+              Good morning, {displayDonorName}
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-light text-primary border border-primary/20">
-              Commercial Donor Hub
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-primary border border-orange-200">
+              {currentUser?.fssaiNumber ? `FSSAI: ${currentUser.fssaiNumber}` : 'Commercial Donor Hub'}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-txt-secondary mt-1">
-            Here’s what needs your attention today. Active redistribution orders and pickup dispatches.
+            Active surplus redistribution, verification tokens, and compliance ledger.
           </p>
         </div>
 
@@ -249,14 +254,23 @@ export default function DonorDashboard({
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => onOpenQR && onOpenQR(currentPickupItem)}
-                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all touch-target"
+                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white text-xs font-bold flex items-center gap-1.5 shadow-orange transition-all touch-target"
               >
                 <QrCode className="w-4 h-4" />
                 <span>Show Handover QR</span>
               </button>
+              <a
+                href={createWhatsAppLink('+919823456789', getPickupArrivalMessage(currentPickupItem, 'Arjun Sharma (Van DL-3C-9821)', 18))}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-status-success border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition-colors touch-target"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>WhatsApp Notice</span>
+              </a>
               <button
                 onClick={() => onOpenContact && onOpenContact(currentPickupItem)}
                 className="px-3 py-2 rounded-xl border border-border hover:bg-gray-50 text-txt-secondary text-xs font-medium flex items-center gap-1.5 transition-colors touch-target"

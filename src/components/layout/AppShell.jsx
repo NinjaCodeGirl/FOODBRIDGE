@@ -19,6 +19,10 @@ export default function AppShell({
   currentPlan = 'FOOD_PARTNER_PRO',
   onNavigateToSubscription,
   onNavigateToPricing,
+  onOpenAuth,
+  onNavigateToLanding,
+  lang = 'en',
+  setLang,
   children
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -53,8 +57,6 @@ export default function AppShell({
           
           {/* Top Navbar */}
           <TopNavbar
-            role={role}
-            setRole={setRole}
             onToggleDrawer={() => setDrawerOpen(!drawerOpen)}
             onOpenNotifications={() => setActiveTab('notifications')}
             unreadCount={unreadNotifications}
@@ -63,6 +65,10 @@ export default function AppShell({
             currentPlan={currentPlan}
             onNavigateToSubscription={onNavigateToSubscription}
             onNavigateToPricing={onNavigateToPricing}
+            onOpenAuth={onOpenAuth}
+            onNavigateToLanding={onNavigateToLanding}
+            lang={lang}
+            setLang={setLang}
           />
 
           {/* Page Content Container */}

@@ -9,30 +9,42 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#065F46',
-          dark: '#064E3B',
-          darker: '#022C22',
-          light: '#D1FAE5',
+          DEFAULT: '#EA580C', // FoodBridge Orange
+          hover: '#D946EF',   
+          dark: '#C2410C',    // Deep Amber Orange
+          darker: '#9A3412',  // Burnt Sienna
+          light: '#FFEDD5',   // Warm Peach Tint
+          subtle: '#FFF7ED',  // Warm Light Cream
+        },
+        navy: {
+          DEFAULT: '#0F172A', // Slate Dark Navy / Black
+          dark: '#020617',    // Deepest Midnight
+          card: '#1E293B',    // Navy Card surface
+          light: '#334155',   // Muted Navy slate
+          border: '#334155',
         },
         surface: {
-          bg: '#F8FAF9',
-          card: '#FFFFFF',
-          subtle: '#F3F4F6',
+          bg: '#F8FAFC',      // Crisp light neutral SaaS canvas
+          card: '#FFFFFF',    // Pure White Card
+          subtle: '#F1F5F9',  // Light Slate surface
+          muted: '#E2E8F0',   // Light border accent
         },
         txt: {
-          primary: '#111827',
-          secondary: '#6B7280',
-          muted: '#9CA3AF',
+          primary: '#0F172A', // Crisp Navy Charcoal
+          secondary: '#475569', // Slate Gray
+          muted: '#94A3B8',   // Light Slate Gray
+          white: '#FFFFFF',
         },
         border: {
-          DEFAULT: '#E5E7EB',
-          dark: '#D1D5DB',
+          DEFAULT: '#E2E8F0',
+          dark: '#CBD5E1',
+          orange: '#FDBA74',
         },
         status: {
-          success: '#16A34A',
-          warning: '#F59E0B',
-          danger: '#DC2626',
-          info: '#2563EB',
+          success: '#10B981', // Emerald Safe
+          warning: '#F59E0B', // Amber Alert
+          danger: '#EF4444',  // Red Critical
+          info: '#3B82F6',    // Blue Transit
         }
       },
       fontFamily: {
@@ -40,6 +52,7 @@ export default {
         display: ['Space Grotesk', 'Inter', 'sans-serif'],
       },
       screens: {
+        xs: '420px',
         sm: '640px',
         md: '768px',
         lg: '1024px',
@@ -47,15 +60,17 @@ export default {
         '2xl': '1440px',
       },
       boxShadow: {
-        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        DEFAULT: '0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.04)',
-        md: '0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
-        lg: '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03)',
-        card: '0 1px 3px 0 rgba(16, 24, 40, 0.05), 0 1px 2px 0 rgba(16, 24, 40, 0.03)',
-        'card-hover': '0 10px 25px -5px rgba(6, 95, 70, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
+        sm: '0 1px 2px 0 rgba(15, 23, 42, 0.05)',
+        DEFAULT: '0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.04)',
+        md: '0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05)',
+        lg: '0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03)',
+        xl: '0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+        card: '0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px 0 rgba(15, 23, 42, 0.04)',
+        'card-hover': '0 10px 25px -5px rgba(234, 88, 12, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+        orange: '0 10px 25px -5px rgba(234, 88, 12, 0.35)',
       },
       borderRadius: {
-        card: '14px',
+        card: '16px',
       }
     },
   },

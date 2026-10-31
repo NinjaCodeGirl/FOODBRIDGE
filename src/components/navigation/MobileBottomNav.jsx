@@ -8,7 +8,9 @@ import {
   Search, 
   BookmarkCheck, 
   MapPin, 
-  History 
+  History,
+  ShieldCheck,
+  TrendingUp
 } from 'lucide-react';
 
 export default function MobileBottomNav({
@@ -22,7 +24,7 @@ export default function MobileBottomNav({
       case 'DONOR':
         return [
           { id: 'overview', label: 'Home', icon: LayoutDashboard },
-          { id: 'donations', label: 'Donations', icon: Package },
+          { id: 'donations', label: 'Listings', icon: Package },
           { id: 'post', label: 'Post', icon: Plus, isAction: true },
           { id: 'pickups', label: 'Pickups', icon: Truck },
           { id: 'settings', label: 'Profile', icon: User },
@@ -31,24 +33,24 @@ export default function MobileBottomNav({
         return [
           { id: 'overview', label: 'Home', icon: LayoutDashboard },
           { id: 'find-food', label: 'Find Food', icon: Search, isAction: true },
-          { id: 'claims', label: 'Claims', icon: BookmarkCheck },
-          { id: 'pickups', label: 'Pickups', icon: Truck },
+          { id: 'map', label: 'Map', icon: MapPin },
+          { id: 'requests', label: 'Requests', icon: BookmarkCheck },
           { id: 'settings', label: 'Profile', icon: User },
         ];
       case 'VOLUNTEER':
         return [
-          { id: 'overview', label: 'Home', icon: LayoutDashboard },
-          { id: 'pickups', label: 'Pickups', icon: Truck, isAction: true },
-          { id: 'map', label: 'Route', icon: MapPin },
+          { id: 'overview', label: 'Console', icon: LayoutDashboard },
+          { id: 'pickups', label: 'Dispatch', icon: Truck, isAction: true },
           { id: 'history', label: 'History', icon: History },
           { id: 'profile', label: 'Profile', icon: User },
         ];
+      case 'ADMIN':
       default:
         return [
           { id: 'overview', label: 'Home', icon: LayoutDashboard },
+          { id: 'revenue', label: 'Revenue', icon: TrendingUp },
+          { id: 'compliance', label: 'FSSAI', icon: ShieldCheck, isAction: true },
           { id: 'donations', label: 'Surplus', icon: Package },
-          { id: 'pickups', label: 'Pickups', icon: Truck, isAction: true },
-          { id: 'impact', label: 'Impact', icon: LayoutDashboard },
           { id: 'settings', label: 'Settings', icon: User },
         ];
     }
@@ -74,8 +76,8 @@ export default function MobileBottomNav({
                 className="flex flex-col items-center justify-center -mt-5 group touch-target focus:outline-none"
                 aria-label={tab.label}
               >
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md transition-transform group-active:scale-95 ${
-                  isActive ? 'bg-primary-dark text-white ring-4 ring-primary-light' : 'bg-primary text-white'
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-orange transition-transform group-active:scale-95 ${
+                  isActive ? 'bg-primary-dark text-white ring-4 ring-orange-200' : 'bg-primary text-white'
                 }`}>
                   <Icon className="w-6 h-6 stroke-[2.5]" />
                 </div>
@@ -91,7 +93,7 @@ export default function MobileBottomNav({
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex flex-col items-center justify-center py-1 px-3 flex-1 touch-target transition-colors ${
-                isActive ? 'text-primary' : 'text-txt-secondary hover:text-txt-primary'
+                isActive ? 'text-primary font-bold' : 'text-txt-secondary hover:text-navy font-medium'
               }`}
               aria-label={tab.label}
               aria-current={isActive ? 'page' : undefined}
