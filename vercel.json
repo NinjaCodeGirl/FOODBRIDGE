@@ -2,10 +2,14 @@
   "buildCommand": "npm ci && npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
+  "functions": {
+    "api/index.py": { "runtime": "python3.12", "maxDuration": 30 },
+    "api/[...path].py": { "runtime": "python3.12", "maxDuration": 30 }
+  },
   "rewrites": [
-    {
-      "source": "/((?!api(?:/|$)|docs|openapi\\.json|redoc).+)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/:path*", "destination": "/api/[...path].py" },
+    { "source": "/docs", "destination": "/api/index.py" },
+    { "source": "/openapi.json", "destination": "/api/index.py" },
+    { "source": "/:path*", "destination": "/index.html" }
   ]
 }
