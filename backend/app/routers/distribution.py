@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
 from app.models.schemas import (
     DistributionEventCreate,
@@ -12,6 +12,7 @@ from app.models.schemas import (
     TrustChainEventResponse
 )
 from app.services.distribution_service import DistributionService
+from app.security import require_roles
 
 router = APIRouter(prefix="/api/distribution", tags=["Distribution Proof & Impact Verification"])
 
@@ -55,9 +56,10 @@ def witness_verify_event(payload: WitnessVerifyRequest):
         raise HTTPException(status_code=500, detail=f"Witness verification failed: {str(e)}")
 
 @router.post("/admin-audit", response_model=DistributionEventResponse)
-def admin_audit_event(payload: AdminAuditRequest):
+def admin_audit_event(payload: AdminAuditRequest, current_user: dict = Depends(require_roles(["ADMIN"]))):
     """
     Platform Governance & Compliance audit decision (VERIFIED, REJECTED, DISPUTED).
+    Requires authenticated user with server-verified role: ADMIN.
     """
     try:
         return DistributionService.admin_audit(payload)

@@ -1,101 +1,66 @@
 # FoodBridge 🍲⚡
 ### AI-Powered Surplus Food Redistribution Ecosystem & Verification Ledger
 
-[![Build with Bharat](https://img.shields.io/badge/Hackathon-Build%20With%20Bharat%202026-orange.svg)](https://github.com/FoodBridge/FoodBridge-Connect)
-[![Python](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Uvicorn-009688.svg)](https://fastapi.tiangolo.com)
-[![Frontend](https://img.shields.io/badge/Frontend-React.js%20%7C%20TailwindCSS-61DAFB.svg)](https://reactjs.org)
-[![Cloud](https://img.shields.io/badge/Cloud-Azure%20AI%20%26%20Maps-0089D6.svg)](https://azure.microsoft.com)
-[![Database](https://img.shields.io/badge/Database-Supabase%20PostgreSQL-3ECF8E.svg)](https://supabase.com)
+[![Build with Bharat](https://img.shields.io/badge/Hackathon-Build%20With%20Bharat%202026-orange.svg)](https://github.com/NinjaCodeGirl/Union_FoodBridge)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Uvicorn-009688.svg)](https://fastapi.tiangolo.com)
+[![Frontend](https://img.shields.io/badge/Frontend-React%2018%20%7C%20TailwindCSS-61DAFB.svg)](https://reactjs.org)
+[![AI Engine](https://img.shields.io/badge/AI-Google%20Gemini%20Flash%20Multimodal-4285F4.svg)](https://deepmind.google/technologies/gemini/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20Supabase-3ECF8E.svg)](https://supabase.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-FoodBridge is an end-to-end AI-powered surplus food redistribution network designed to eliminate urban food waste and address food insecurity in real time. Built for restaurants, hotels, cloud kitchens, and verified NGOs, FoodBridge automates freshness evaluation, algorithmic multi-recipient batch splitting, proximity routing, and QR cryptographic handshakes.
+FoodBridge is an enterprise-grade surplus food redistribution platform connecting restaurants, hotels, cloud kitchens, and verified NGOs/shelters with community volunteers. It automates AI freshness evaluation, proximity-based batch splitting, cryptographic QR/OTP handshakes, physical evidence hashing, and transparent community distribution auditing.
 
 ---
 
-## 📐 System Architecture & Flowchart
+## 🏛️ System Architecture
 
 ```
-                    Restaurants / Hotels / Caterers
-                                   │
-                                   ▼
-                         React.js + Tailwind CSS
-                        (Responsive Web Application)
-                                   │
-                           REST API Requests
-                                   │
-                                   ▼
-                         FastAPI + Uvicorn Server
-                    (Business Logic & API Gateway Layer)
-                                   │
-       ┌───────────────────┬───────┴───────┬───────────────────┐
-       │                   │               │                   │
-       ▼                   ▼               ▼                   ▼
-   Azure AI           Azure Maps      Azure Functions      QR Generator
-   Language           + Location        (Automation)      (Pickup Token)
-       │                   │               │                   │
-  ├ AI Freshness      ├ Live Maps     ├ Smart Food        ├ QR Creation
-  ├ Food Analysis     ├ Nearby NGOs   ├ Allocation        ├ QR Validation
-  ├ Category          ├ Route ETA     ├ Expiry Check      └ Pickup Verify
-  └ Safety Score      └ Distance      └ Background Jobs
-       │                   │               │                   │
-       └───────────────────┴───────┬───────┴───────────────────┘
-                                   │
-                                   ▼
-                        Matching & Trust Engine
-      (Distance • Capacity • Trust Score • Food Type
-          Cold Chain • Availability • AI Score)
-                                   │
-                                   ▼
-                   Supabase PostgreSQL + Supabase Storage
-              (Users • NGOs • Donations • Ratings • Images)
-                                   │
-                                   ▼
-                             Supabase Auth
-               (Restaurant • NGO • Admin Authentication)
-                                   │
-                                   ▼
-                      Azure Notification Hubs
-      (Donation Alerts • Claim Updates • Pickup Reminders • QR Verification Status)
-                                   │
-                                   ▼
-                       Live Dashboard & Analytics
-      (Meals Rescued • CO₂ Avoided • Trust Scores • Leaderboard • Orgs Served)
+                    Surplus Donors (Restaurants / Hotels / Caterers)
+                                          │
+                                          ▼
+                               React 18 + Tailwind CSS SPA
+                    (Vite • Leaflet Maps • TrustChain Evidence Capture)
+                                          │
+                                 REST API (Bearer JWT)
+                                          │
+                                          ▼
+                               FastAPI + Uvicorn Server
+                     (PBKDF2 Auth • Role RBAC • Allocation Engine)
+                                          │
+        ┌───────────────────┬─────────────┴─────────────┬───────────────────┐
+        │                   │                           │                   │
+        ▼                   ▼                           ▼                   ▼
+   Gemini AI         OpenStreetMap /            Evidence Vault        TrustChain QR
+  Multimodal         Leaflet Routing           (SHA-256 Storage)      & OTP Ledger
+        │                   │                           │                   │
+   ├ Freshness Score   ├ Proximity Radius          ├ Multipart Binary   ├ HMAC Anti-Replay
+   ├ Hours Remaining   ├ Lat/Lng Distance          ├ Server Checksum    ├ 6-Digit Single-Use
+   ├ Category A/B      ├ Route Travel ETA          ├ Disk Persist       ├ Role Enforcement
+   └ Decay Factor      └ Nearest Clusters          └ Tamper Evidence    └ Chain Verification
+        │                   │                           │                   │
+        └───────────────────┴─────────────┬─────────────┴───────────────────┘
+                                          │
+                                          ▼
+                              Distribution & Witness Ledger
+                   (Cumulative Reconciliation • Anti-Self-Witnessing)
+                                          │
+                                          ▼
+                            Admin Governance & Audit Gate
+                      (RBAC Strict Verification • Audit Log)
 ```
 
 ---
 
-## 🔥 Key Technical Innovations
+## 🔑 Pre-Seeded Demonstration Personas
 
-1. **🤖 AI-Driven Freshness Prediction Engine**:
-   Evaluates remaining shelf-life, temperature stability, and preparation timestamps using Azure AI Language and custom ML parameters to assign a validation hash before listing.
+All personas share the standard development password: **`FoodBridge@2026!`**
 
-2. **🧩 Algorithmic Multi-Recipient Batch Splitting**:
-   Dynamically splits large surplus donations (e.g., 500 meals) across multiple nearby shelters based on active capacity limits to prevent localized over-supply.
-
-3. **📍 Real-Time Location & Proximity Matching**:
-   Uses distance matrices, ETA calculations, and target cold-chain capabilities to optimize pickup dispatch within safe delivery time windows.
-
-4. **🔐 QR-Secured Handoff Verification**:
-   Generates cryptographically signed QR verification tokens (`FoodBridge-Token-v1`) scanned at pickup to complete transactions and prevent food diversion.
-
-5. **🌱 Real-Time Carbon Mitigation Tracking**:
-   Calculates landfill methane diversion, tracking **2.5 kg CO₂ mitigation per rescued meal** directly on a live public dashboard.
-
-6. **⭐ Trust & Reputation Rating System**:
-   Dynamically updates donor punctuality and recipient reliability scores based on completed handshake metrics.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technology | Function |
-| :--- | :--- | :--- |
-| **Frontend** | React 18, Vite, Tailwind CSS, Lucide Icons | Responsive single-page application & real-time tracking dashboard |
-| **Backend** | Python 3.11, FastAPI, Uvicorn, Pydantic v2 | High-performance ASGI REST API gateway & allocation engine |
-| **AI / ML** | Azure AI Services, Custom Regression Models | Freshness scoring, shelf-life prediction, safety hashing |
-| **Location & Logistics** | Azure Maps API, Haversine Distance Matrix | Proximity routing, ETA prediction, cold-chain checks |
-| **Database & Auth** | Supabase (PostgreSQL), Supabase Auth & Storage | Relational data ledger, role-based credentials, image storage |
-| **Verification** | Python `qrcode`, Cryptographic Validation Hashes | Secure QR handshake generation & verification token scanning |
+| Persona | Role | Email | Password | Primary Capabilities |
+|---------|------|-------|----------|----------------------|
+| **The Grand Palace** | `RESTAURANT` | `taj@foodbridge.org` | `FoodBridge@2026!` | List surplus food, multimodal AI freshness check, generate pickup QR & OTP, view donor analytics. |
+| **Akshaya Patra Delhi** | `RECIPIENT` | `akshaya@foodbridge.org` | `FoodBridge@2026!` | Browse surplus map within radius, claim batches, redeem QR codes, manage intake & distribution sessions. |
+| **Arjun Sharma** | `VOLUNTEER` | `arjun@foodbridge.org` | `FoodBridge@2026!` | Accept rescue tasks, capture photo evidence with GPS, submit handoff QR/OTP, view delivery routes. |
+| **System Governance Admin** | `ADMIN` | `admin@foodbridge.org` | `FoodBridge@2026!` | Enterprise governance, audit distribution records, inspect tamper-proof SHA-256 evidence, lock closed events. |
 
 ---
 
@@ -103,135 +68,117 @@ FoodBridge is an end-to-end AI-powered surplus food redistribution network desig
 
 ### Prerequisites
 - **Node.js**: v18.0.0 or higher
-- **Python**: v3.10 or higher
+- **Python**: v3.10 or higher (Tested on Python 3.14)
 - **Git**
 
 ---
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/FoodBridge/FoodBridge-Connect.git
-cd FoodBridge-Connect
-```
+### 1. Backend Setup (FastAPI)
 
----
-
-### 2. Backend Setup (FastAPI)
 ```bash
-# Navigate to backend folder
+# Navigate to backend directory
 cd backend
 
-# Create virtual environment
+# Create and activate virtual environment
+# Windows (PowerShell):
 python -m venv venv
-
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# Linux/macOS:
+.\venv\Scripts\Activate.ps1
+# Linux / macOS:
+python3 -m venv venv
 source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Create .env file from template
-cp .env.example .env
+# Configure environment variables
+# Copy template and update API keys as needed
+copy .env.example .env
 
-# Run FastAPI server
+# Start FastAPI server
 uvicorn app.main:app --reload --port 8000
 ```
-Backend API interactive docs will be available at: `http://localhost:8000/docs`
+Interactive OpenAPI documentation will be accessible at: **`http://localhost:8000/docs`**
 
 ---
 
-### 3. Frontend Setup (React.js)
-```bash
-# Navigate to frontend folder (from repository root)
-cd frontend
+### 2. Frontend Setup (React 18 + Vite)
 
-# Install Node modules
+```bash
+# Navigate to repository root (where package.json is located)
+cd ..
+
+# Install npm dependencies
 npm install
 
-# Run Vite dev server
+# Start Vite development server
 npm run dev
 ```
-Frontend interface will be available at: `http://localhost:5173`
+The web application will be accessible at: **`http://localhost:5173`**
 
 ---
 
-## 📁 Repository Structure
+### 3. Running Automated End-to-End Tests
 
-```
-FoodBridge-Connect/
-├── backend/
-│   ├── app/
-│   │   ├── main.py                # FastAPI entry point & CORS configuration
-│   │   ├── config.py              # Environment variables & configuration
-│   │   ├── models/
-│   │   │   └── schemas.py         # Pydantic data schemas & request validation
-│   │   ├── services/
-│   │   │   ├── freshness_ai.py    # Azure AI freshness evaluation engine
-│   │   │   ├── matching_engine.py # Smart matching & batch splitting algorithm
-│   │   │   ├── qr_service.py      # QR verification token generator & scanner
-│   │   │   └── impact_tracker.py  # Real-time CO2 & meals offset calculator
-│   │   └── routers/
-│   │       ├── donations.py       # Surplus listing endpoints
-│   │       ├── ngo.py             # NGO claims & matching endpoints
-│   │       ├── qr.py              # QR handshake verification endpoints
-│   │       └── analytics.py       # Impact dashboard & leaderboard endpoints
-│   ├── requirements.txt           # Python dependencies
-│   └── .env.example               # Backend environment variables template
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx                # Main React SPA component
-│   │   ├── index.css              # Custom Tailwind CSS & dark theme styling
-│   │   └── components/
-│   │       ├── Navbar.jsx         # Header & navigation component
-│   │       ├── Dashboard.jsx      # Impact statistics overview
-│   │       ├── DonationForm.jsx   # Surplus food listing form with AI score
-│   │       ├── SurplusFeed.jsx    # Real-time available surplus listings feed
-│   │       ├── QRModal.jsx        # QR code generator & handoff scanner modal
-│   │       └── Leaderboard.jsx   # Trust score leaderboards
-│   ├── package.json               # Node.js dependencies
-│   ├── vite.config.js             # Vite configuration
-│   ├── tailwind.config.js         # Tailwind CSS design system
-│   └── postcss.config.js          # PostCSS configuration
-├── database/
-│   └── schema.sql                 # Supabase PostgreSQL relational database schema
-├── .gitignore                     # Git ignore rules
-├── LICENSE                        # MIT Open Source License
-└── README.md                      # Project documentation
+The test suite validates the full 18-step donation lifecycle (100 meals listed $\to$ 60 claimed $\to$ pickup $\to$ delivery $\to$ distribution $\to$ witness $\to$ admin audit) plus 8 negative security attack vectors:
+
+```bash
+# From repository root:
+# Windows (PowerShell):
+$env:PYTHONPATH="backend"; python -m unittest backend/tests/test_e2e_lifecycle.py -v
+
+# Linux / macOS:
+PYTHONPATH=backend python3 -m unittest backend/tests/test_e2e_lifecycle.py -v
 ```
 
 ---
 
-## 📡 REST API Documentation
+## 📡 REST API Reference
 
-### 1. Surplus Listings
-- `POST /api/donations/create`: Submit a new surplus food listing (triggers AI Freshness scoring & validation hash).
-- `GET /api/donations/active`: Fetch active surplus listings filtered by location & freshness score.
+### Authentication & RBAC (`/api/auth`)
+- `POST /api/auth/register`: Register new user with PBKDF2 password hashing and compliance IDs.
+- `POST /api/auth/login`: Authenticate email/password; returns signed JWT Bearer token and role.
+- `GET /api/auth/me`: Retrieve profile of currently authenticated user using Bearer token.
 
-### 2. Smart Matching & Allocation
-- `POST /api/matching/allocate`: Execute automated multi-recipient batch splitting for large donations.
-- `GET /api/ngo/recommendations`: Retrieve proximity and cold-chain prioritized recommendations for an NGO.
+### Surplus Food & AI Freshness (`/api/donations`)
+- `POST /api/donations/create`: Create surplus food listing with Category A/B classification.
+- `POST /api/donations/ai-screen`: Multimodal visual AI screening calculating decay factor and remaining safe window.
+- `GET /api/donations/active`: Query active surplus listings filtered by status and location.
 
-### 3. QR Verification Handshake
-- `POST /api/qr/generate`: Create cryptographic QR verification payload for courier pickup.
-- `POST /api/qr/verify`: Scan & validate QR token to finalize handover and update global Trust Scores.
+### TrustChain Verification & Handshake (`/api/qr`)
+- `POST /api/qr/generate`: Generate cryptographically signed, expiring QR token with HMAC-SHA256.
+- `POST /api/qr/verify`: Redeem pickup QR token with anti-replay tracking (`CONSUMED_TOKENS`).
+- `POST /api/qr/verify-otp`: Redeem single-use 6-digit offline emergency OTP.
 
-### 4. Impact Analytics
-- `GET /api/analytics/impact`: Fetch aggregated metrics (Meals Rescued, CO₂ Avoided, Active NGO Partners).
-- `GET /api/analytics/leaderboard`: Fetch donor & NGO trust score leaderboards.
+### Multipart Evidence Vault (`/api/evidence`)
+- `POST /api/evidence/upload`: Upload real image/video evidence binary; server calculates tamper-proof SHA-256 checksum and saves to `backend/uploads/`.
+- `GET /uploads/{filename}`: Static server route for validated evidence artifacts.
+
+### Distribution Centre & Witness Ledger (`/api/distribution`)
+- `POST /api/distribution/intake`: NGO registers intake event for received surplus portions.
+- `POST /api/distribution/record-session`: Record beneficiary meal distribution with cumulative reconciliation against ghost portions.
+- `POST /api/distribution/verify-witness`: Independent 3rd-party witness verification with bidirectional anti-self-witnessing validation.
+- `POST /api/distribution/admin-audit`: Admin-only audit lock enforcing RBAC (`ADMIN` role required).
 
 ---
 
-## 📊 Environmental & Civic Impact Model
+## 🛡️ Security Architecture & Integrity
 
-FoodBridge operates on verified environmental metrics:
-$$\text{CO}_2 \text{ Mitigation (kg)} = \text{Meals Rescued} \times 2.5\text{ kg}$$
+1. **PBKDF2 Password Protection**: Passwords hashed using PBKDF2-HMAC-SHA256 with 100,000 iterations and cryptographic random salt.
+2. **Server-Enforced RBAC**: Protected routes verify JWT `role` claims server-side; client manipulation cannot bypass administrative gates.
+3. **QR Anti-Replay Tokens**: Redeemed QR tokens are permanently marked and cannot be double-spent.
+4. **Single-Use Offline OTP**: 6-digit emergency OTPs expire immediately upon initial redemption.
+5. **Cumulative Portion Reconciliation**: Distribution center blocks multiple sessions from allocating more portions than physically received.
+6. **Anti-Self-Witnessing**: Strict identity matching prevents distribution agencies or coordinators from signing their own witness records.
+7. **Multipart Binary SHA-256**: Uploaded photos and videos are hashed at the byte level on the server, generating immutable audit trails.
 
-- **15,000+** meals saved per month in pilot testing.
-- **4.5 Tonnes** of edible food diverted from decomposing in landfills.
-- **37.5 Tonnes** of $\text{CO}_2$ emissions mitigated monthly.
+---
+
+## 🌿 Environmental Impact Model
+
+FoodBridge quantifies carbon offset based on scientific municipal solid waste emission factors:
+$$\text{CO}_2 \text{ Mitigation (kg)} = \text{Rescued Meals} \times 2.5\text{ kg}$$
+
+Every verified distribution automatically reflects on real-time public impact dashboards and generates downloadable digital certificates.
 
 ---
 
@@ -246,5 +193,3 @@ $$\text{CO}_2 \text{ Mitigation (kg)} = \text{Meals Rescued} \times 2.5\text{ kg
 
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-*Built with ❤️ for **Build With Bharat 2026 Hackathon**.*

@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from typing import Optional
 from app.models.schemas import SurplusListingCreate, SurplusListingResponse, FreshnessEvaluationResult
 from app.services.freshness_ai import AzureFreshnessAIEngine
 
@@ -97,3 +98,50 @@ def create_surplus_listing(listing: SurplusListingCreate):
 @router.get("/active", response_model=list[SurplusListingResponse])
 def get_active_listings():
     return [item for item in SURPLUS_DB if item["status"] in ["AVAILABLE", "MATCHED"]]
+
+@router.post("/ai-screen", response_model=FreshnessEvaluationResult)
+async def ai_screen_food_donation(
+    file: Optional[UploadFile] = File(None),
+    food_title: str = Form(...),
+    food_category: str = Form("COOKED_MEALS"),
+    storage_condition: str = Form("REFRIGERATED"),
+    classification: str = Form("CATEGORY_A"),
+    preparation_timestamp: Optional[str] = Form(None)
+):
+    """
+    Multimodal AI Freshness & Shelf-Life Assessment Endpoint.
+    Performs visual inspection of container/food photograph via Gemini vision
+    with thermodynamic temperature decay curve calibration.
+    """
+    prep_time = datetime.now(timezone.utc)
+    if preparation_timestamp:
+        try:
+            prep_time = datetime.fromisoformat(preparation_timestamp.replace('Z', '+00:00'))
+        except Exception:
+            pass
+
+    image_bytes = b""
+    mime_type = "image/jpeg"
+    if file:
+        image_bytes = await file.read()
+        mime_type = file.content_type or "image/jpeg"
+
+    if image_bytes:
+        return AzureFreshnessAIEngine.evaluate_freshness_multimodal(
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+            food_title=food_title,
+            food_category=food_category,
+            preparation_timestamp=prep_time,
+            storage_condition=storage_condition,
+            classification=classification
+        )
+
+    return AzureFreshnessAIEngine.evaluate_freshness(
+        food_title=food_title,
+        food_category=food_category,
+        preparation_timestamp=prep_time,
+        storage_condition=storage_condition,
+        classification=classification
+    )
+

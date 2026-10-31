@@ -99,7 +99,15 @@ export function AuthProvider({ children }) {
     } catch (e) {}
   }, [accounts]);
 
-  // Persist active session
+  const [jwtToken, setJwtToken] = useState(() => {
+    try {
+      return localStorage.getItem('foodbridge_jwt_token') || null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Persist active session and token
   useEffect(() => {
     try {
       if (currentUser) {
@@ -107,12 +115,44 @@ export function AuthProvider({ children }) {
       } else {
         localStorage.removeItem('foodbridge_current_user_v2');
       }
+      if (jwtToken) {
+        localStorage.setItem('foodbridge_jwt_token', jwtToken);
+      } else {
+        localStorage.removeItem('foodbridge_jwt_token');
+      }
     } catch (e) {}
-  }, [currentUser]);
+  }, [currentUser, jwtToken]);
 
-  // Login handler
-  const login = (email, password) => {
+  // Login handler with backend verification and local fallback
+  const login = async (email, password) => {
     const trimmedEmail = email.trim().toLowerCase();
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+    try {
+      const res = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmedEmail, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setJwtToken(data.access_token);
+        const mappedUser = {
+          id: data.user_id,
+          email: data.email,
+          name: data.full_name,
+          role: data.role === 'RESTAURANT' ? 'DONOR' : data.role,
+          organizationName: data.organization_name || data.full_name,
+          phone: '+91 98999 11223',
+          trustScore: 4.98
+        };
+        setCurrentUser(mappedUser);
+        return mappedUser;
+      }
+    } catch (err) {
+      console.warn('Backend auth offline, using authenticated local registry fallback:', err);
+    }
+
     const found = accounts.find(a => a.email.toLowerCase() === trimmedEmail);
     if (!found) {
       throw new Error('No registered account found with this email address.');
@@ -123,17 +163,68 @@ export function AuthProvider({ children }) {
   };
 
   // Demo Login Quick-switch
-  const loginAsDemo = (role) => {
-    const found = accounts.find(a => a.role === role);
-    if (found) {
-      setCurrentUser(found);
-      return found;
+  const loginAsDemo = async (role) => {
+    const demoEmailMap = {
+      DONOR: 'taj@foodbridge.org',
+      RESTAURANT: 'taj@foodbridge.org',
+      NGO: 'akshaya@foodbridge.org',
+      VOLUNTEER: 'arjun@foodbridge.org',
+      ADMIN: 'admin@foodbridge.org'
+    };
+    const targetEmail = demoEmailMap[role] || 'taj@foodbridge.org';
+    try {
+      return await login(targetEmail, 'FoodBridge@2026!');
+    } catch (err) {
+      const found = accounts.find(a => a.role === role);
+      if (found) {
+        setCurrentUser(found);
+        return found;
+      }
     }
   };
 
   // Register handler
-  const register = (registrationData) => {
+  const register = async (registrationData) => {
     const trimmedEmail = registrationData.email.trim().toLowerCase();
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+    try {
+      const res = await fetch(`${apiUrl}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          password: registrationData.password || 'FoodBridge@2026!',
+          full_name: registrationData.name,
+          role: registrationData.role || 'DONOR',
+          organization_name: registrationData.organizationName || registrationData.name,
+          phone_number: registrationData.phone,
+          fssai_license: registrationData.fssaiNumber,
+          darpan_id: registrationData.registrationNumber,
+          vehicle_type: registrationData.transportMode,
+          service_radius_km: registrationData.serviceRadiusKm ? Number(registrationData.serviceRadiusKm) : 15
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setJwtToken(data.access_token);
+        const mappedUser = {
+          id: data.user_id,
+          email: data.email,
+          name: data.full_name,
+          role: data.role === 'RESTAURANT' ? 'DONOR' : data.role,
+          organizationName: data.organization_name || data.full_name,
+          phone: registrationData.phone,
+          trustScore: 5.00
+        };
+        setAccounts(prev => [mappedUser, ...prev]);
+        setCurrentUser(mappedUser);
+        return mappedUser;
+      }
+    } catch (err) {
+      console.warn('Backend register offline, registering to local state:', err);
+    }
+
     const existing = accounts.find(a => a.email.toLowerCase() === trimmedEmail);
     if (existing) {
       throw new Error('An account with this email address is already registered.');
@@ -149,7 +240,6 @@ export function AuthProvider({ children }) {
       address: registrationData.address,
       latitude: Number(registrationData.latitude || 28.6100),
       longitude: Number(registrationData.longitude || 77.0380),
-      // Role specific fields
       fssaiNumber: registrationData.fssaiNumber || null,
       businessType: registrationData.businessType || null,
       registrationNumber: registrationData.registrationNumber || null,
@@ -158,7 +248,7 @@ export function AuthProvider({ children }) {
       operatingHours: registrationData.operatingHours || '09:00 AM - 08:00 PM',
       transportMode: registrationData.transportMode || null,
       serviceRadiusKm: registrationData.serviceRadiusKm ? Number(registrationData.serviceRadiusKm) : 10,
-      status: registrationData.role === 'ADMIN' ? 'APPROVED' : 'APPROVED', // Auto-approved for hackathon demonstration
+      status: 'APPROVED',
       trustScore: 5.00,
       createdAt: new Date().toISOString()
     };
@@ -171,6 +261,7 @@ export function AuthProvider({ children }) {
   // Logout handler
   const logout = () => {
     setCurrentUser(null);
+    setJwtToken(null);
   };
 
   // Switch role directly (admin utility or developer preview)
@@ -190,6 +281,7 @@ export function AuthProvider({ children }) {
         currentUser,
         role: currentUser?.role || null,
         isAuthenticated: !!currentUser,
+        jwtToken,
         login,
         loginAsDemo,
         register,

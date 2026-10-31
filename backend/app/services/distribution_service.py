@@ -292,22 +292,28 @@ class DistributionService:
         if not event:
             raise ValueError(f"Distribution event {data.event_id} not found.")
 
-        # Business Rule & Fraud Check: Never allow distributed > received
+        # Business Rule & Data Integrity: Cumulative portion reconciliation
+        new_cumulative_distributed = event["servings_distributed"] + data.servings_distributed
+        new_cumulative_spoiled = event["servings_spoiled"] + (data.servings_spoiled or 0)
+        new_cumulative_rejected = event["servings_rejected"] + (data.servings_rejected or 0)
+        
         total_accounted = (
-            data.servings_distributed +
+            new_cumulative_distributed +
             data.servings_remaining +
-            (data.servings_spoiled or 0) +
-            (data.servings_rejected or 0)
+            new_cumulative_spoiled +
+            new_cumulative_rejected
         )
         if total_accounted > event["quantity_received"]:
             raise ValueError(
-                f"Reconciliation error: Total accounted portions ({total_accounted}) exceeds received quantity ({event['quantity_received']})."
+                f"Reconciliation error: Total accounted portions ({total_accounted}) exceeds received quantity ({event['quantity_received']}). Over-allocation blocked."
             )
+        if data.servings_remaining < 0:
+            raise ValueError("Reconciliation error: Remaining servings cannot be negative.")
 
-        event["servings_distributed"] += data.servings_distributed
+        event["servings_distributed"] = new_cumulative_distributed
         event["servings_remaining"] = data.servings_remaining
-        event["servings_spoiled"] += (data.servings_spoiled or 0)
-        event["servings_rejected"] += (data.servings_rejected or 0)
+        event["servings_spoiled"] = new_cumulative_spoiled
+        event["servings_rejected"] = new_cumulative_rejected
         event["beneficiary_count"] += data.beneficiary_count
         event["actual_location"] = data.actual_location
         if data.latitude: event["latitude"] = data.latitude
@@ -353,8 +359,16 @@ class DistributionService:
         if not event:
             raise ValueError(f"Distribution event {data.event_id} not found.")
 
-        # Business Rule: Witness cannot be the same as the NGO author
-        if event["ngo_name"].lower() in data.witness_organization.lower():
+        # Business Rule: Bidirectional Anti-Self-Witnessing Check
+        ngo_norm = event["ngo_name"].lower().strip()
+        witness_org_norm = data.witness_organization.lower().strip()
+
+        # Tokenize to catch short or variant names
+        ngo_tokens = {t for t in ngo_norm.replace("-", " ").replace(",", " ").split() if len(t) > 3}
+        witness_tokens = {t for t in witness_org_norm.replace("-", " ").replace(",", " ").split() if len(t) > 3}
+        common_meaningful = (ngo_tokens & witness_tokens) - {"foundation", "shelter", "india", "delhi", "center", "centre", "home", "relief"}
+
+        if (ngo_norm in witness_org_norm or witness_org_norm in ngo_norm or len(common_meaningful) > 0):
             raise ValueError("Independent verification violation: An NGO cannot witness its own internal distribution event.")
 
         event["witness_name"] = data.witness_name

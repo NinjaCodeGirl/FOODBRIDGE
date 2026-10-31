@@ -204,26 +204,59 @@ export default function CameraEvidenceModal({
   };
 
   // Submit Evidence
-  const handleSubmitEvidence = () => {
+  const handleSubmitEvidence = async () => {
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      if (onEvidenceSubmitted) {
-        onEvidenceSubmitted({
-          donationId,
-          mode,
-          evidenceHash: evidenceHash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-          mediaUrl: capturedPhotoUrl || recordedVideoUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
-          actualServings: Number(actualServings),
-          spoiledServings: Number(spoiledServings),
-          rejectedServings: Number(rejectedServings),
-          gpsCoords,
-          timestamp: new Date().toISOString(),
-          notes: evidenceNotes
+    let finalUrl = capturedPhotoUrl || recordedVideoUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
+    let finalHash = evidenceHash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
+    // Attempt multipart upload to backend
+    if (capturedBlob) {
+      try {
+        const formData = new FormData();
+        const ext = recordedVideoUrl ? 'webm' : 'jpg';
+        formData.append('file', capturedBlob, `evidence_${donationId}_${Date.now()}.${ext}`);
+        formData.append('donation_id', donationId);
+        formData.append('evidence_type', mode === 'PICKUP' ? 'PICKUP_PHOTO' : (mode === 'DELIVERY' ? 'DELIVERY_PHOTO' : 'DISTRIBUTION_SERVING_PHOTO'));
+        if (gpsCoords) {
+          formData.append('latitude', String(gpsCoords.lat));
+          formData.append('longitude', String(gpsCoords.lon));
+        }
+        if (evidenceNotes) {
+          formData.append('uploader_notes', evidenceNotes);
+        }
+
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/evidence/upload`, {
+          method: 'POST',
+          body: formData
         });
+
+        if (res.ok) {
+          const data = await res.json();
+          finalUrl = `${apiUrl}${data.file_url}`;
+          finalHash = data.file_hash;
+        }
+      } catch (err) {
+        console.warn('Backend evidence upload network error, using client-side cryptographic seal:', err);
       }
-      onClose();
-    }, 700);
+    }
+
+    setSubmitting(false);
+    if (onEvidenceSubmitted) {
+      onEvidenceSubmitted({
+        donationId,
+        mode,
+        evidenceHash: finalHash,
+        mediaUrl: finalUrl,
+        actualServings: Number(actualServings),
+        spoiledServings: Number(spoiledServings),
+        rejectedServings: Number(rejectedServings),
+        gpsCoords,
+        timestamp: new Date().toISOString(),
+        notes: evidenceNotes
+      });
+    }
+    onClose();
   };
 
   if (!isOpen) return null;

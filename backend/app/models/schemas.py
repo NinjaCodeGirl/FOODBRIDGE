@@ -35,6 +35,8 @@ class FreshnessEvaluationResult(BaseModel):
     allergens: List[str] = []
     validation_hash: str
     ai_recommendation: str
+    ai_source: Optional[str] = "DETERMINISTIC_DECAY_MODEL"
+    ai_verified: bool = False
 
 # 3. Surplus Listing Response
 class SurplusListingResponse(BaseModel):
@@ -155,6 +157,11 @@ class QRVerificationResponse(BaseModel):
 class QRVerifyRequest(BaseModel):
     verification_token: str
     scanned_by_role: str
+
+class OTPVerifyRequest(BaseModel):
+    donation_id: str
+    otp_code: str
+    role: str = "VOLUNTEER"
 
 class QRVerifyResult(BaseModel):
     success: bool

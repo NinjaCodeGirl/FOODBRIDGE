@@ -10,10 +10,16 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    role VARCHAR(50) CHECK (role IN ('RESTAURANT', 'NGO', 'COURIER', 'ADMIN')) NOT NULL,
+    role VARCHAR(50) CHECK (role IN ('RESTAURANT', 'NGO', 'COURIER', 'VOLUNTEER', 'ADMIN')) NOT NULL,
     phone_number VARCHAR(20),
     organization_name VARCHAR(255),
+    fssai_license VARCHAR(100),
+    darpan_id VARCHAR(100),
+    vehicle_type VARCHAR(100),
+    service_radius_km INT DEFAULT 15,
+    mfa_enabled BOOLEAN DEFAULT FALSE,
     trust_score DECIMAL(3,2) DEFAULT 5.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

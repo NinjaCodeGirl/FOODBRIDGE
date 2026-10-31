@@ -150,5 +150,77 @@ class AzureFreshnessAIEngine:
             risk_level=risk_level,
             allergens=allergens,
             validation_hash=validation_hash,
-            ai_recommendation=recommendation
+            ai_recommendation=recommendation,
+            ai_source="GEMINI_API" if gemini_recommendation else "DETERMINISTIC_DECAY_MODEL",
+            ai_verified=bool(gemini_recommendation)
         )
+
+    @classmethod
+    def evaluate_freshness_multimodal(
+        cls,
+        image_bytes: bytes,
+        mime_type: str,
+        food_title: str,
+        food_category: str,
+        preparation_timestamp: datetime,
+        storage_condition: str,
+        classification: str = "CATEGORY_A"
+    ) -> FreshnessEvaluationResult:
+        """
+        Multimodal AI Freshness Inspection combining visual container photograph inspection
+        with food physics and microbial temperature decay curves.
+        """
+        base_result = cls.evaluate_freshness(
+            food_title=food_title,
+            food_category=food_category,
+            preparation_timestamp=preparation_timestamp,
+            storage_condition=storage_condition,
+            classification=classification
+        )
+
+        if not gemini_model or not image_bytes:
+            return base_result
+
+        try:
+            image_part = {
+                "mime_type": mime_type,
+                "data": image_bytes
+            }
+            prompt = (
+                f"Inspect this food donation photograph for surplus redistribution safety:\n"
+                f"Claimed Food Item: {food_title}\n"
+                f"Category: {food_category}\n"
+                f"Storage Condition: {storage_condition}\n"
+                f"Classification: {classification}\n\n"
+                f"Check for signs of spoilage, container cleanliness, condensation, and packaging integrity.\n"
+                f"Respond ONLY in valid raw JSON with keys:\n"
+                f'{{"visual_safety_pass": true, "spoilage_detected": false, "freshness_score": 92.0, "risk_level": "LOW", '
+                f'"allergens": ["Gluten", "Dairy"], "inspector_notes": "Clean sealed containers, food looks fresh."}}'
+            )
+            response = gemini_model.generate_content([prompt, image_part])
+            resp_text = response.text.strip()
+            if "```json" in resp_text:
+                resp_text = resp_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in resp_text:
+                resp_text = resp_text.split("```")[1].split("```")[0].strip()
+
+            ai_data = json.loads(resp_text)
+            ai_score = float(ai_data.get("freshness_score", base_result.freshness_score))
+            risk_level = ai_data.get("risk_level", base_result.risk_level)
+            allergens = list(set(base_result.allergens + ai_data.get("allergens", [])))
+            notes = ai_data.get("inspector_notes", base_result.ai_recommendation)
+
+            return FreshnessEvaluationResult(
+                freshness_score=round(ai_score, 2),
+                estimated_shelf_life_hours=base_result.estimated_shelf_life_hours,
+                safety_category="HIGHLY_FRESH" if ai_score >= 75 else ("MODERATE_RESCUE" if ai_score >= 45 else "URGENT_DISPATCH"),
+                risk_level=risk_level,
+                allergens=allergens,
+                validation_hash=base_result.validation_hash,
+                ai_recommendation=f"Gemini Visual Inspection: {notes}",
+                ai_source="GEMINI_MULTIMODAL_API",
+                ai_verified=True
+            )
+        except Exception as e:
+            logger.warning(f"Gemini Multimodal evaluation failed, falling back to deterministic model: {e}")
+            return base_result

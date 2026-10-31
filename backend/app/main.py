@@ -1,8 +1,22 @@
+import os
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.config import settings
-from app.routers import donations, ngo, qr, analytics, calls, ratings, subscriptions, revenue, distribution
+from app.routers import (
+    auth,
+    donations,
+    ngo,
+    qr,
+    analytics,
+    calls,
+    ratings,
+    subscriptions,
+    revenue,
+    distribution,
+    evidence
+)
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -21,7 +35,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Static File Storage for Verified Evidence Media
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+
 # Include API Routers
+app.include_router(auth.router)
 app.include_router(donations.router)
 app.include_router(ngo.router)
 app.include_router(qr.router)
@@ -31,6 +52,7 @@ app.include_router(ratings.router)
 app.include_router(subscriptions.router)
 app.include_router(revenue.router)
 app.include_router(distribution.router)
+app.include_router(evidence.router)
 
 @app.get("/", tags=["Health Check"])
 def root():
