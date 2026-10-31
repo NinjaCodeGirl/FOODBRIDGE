@@ -1,0 +1,15 @@
+# Exclude Python backend - Vercel only serves the React frontend
+backend/
+*.py
+*.pyc
+__pycache__/
+.pytest_cache/
+*.egg-info/
+venv/
+.venv/
+node_modules/
+.git/
+*.log
+*.md
+tests/
+docs/
