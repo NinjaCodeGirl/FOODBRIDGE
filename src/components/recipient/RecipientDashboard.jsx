@@ -554,23 +554,6 @@ export default function RecipientDashboard({
         </div>
       )}
 
-      {/* MODALS */}
-      {selectedListingForRequest && (
-        <RequestFoodModal
-          listing={selectedListingForRequest}
-          onClose={() => setSelectedListingForRequest(null)}
-          onSubmitRequest={handleCreateRequest}
-        />
-      )}
-
-      {selectedRequestForDistribution && (
-        <RecordDistributionModal
-          requestItem={selectedRequestForDistribution}
-          onClose={() => setSelectedRequestForDistribution(null)}
-          onRecordSubmitted={handleRecordDistribution}
-        />
-      )}
-
       {/* 8. TAB 4: DISTRIBUTION AUDIT RECORDS */}
       {activeTab === 'distributions' && (
         <div className="space-y-6">

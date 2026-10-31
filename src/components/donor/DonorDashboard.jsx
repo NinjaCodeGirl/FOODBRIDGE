@@ -54,6 +54,8 @@ export default function DonorDashboard({
 }) {
   const { currentUser } = useAuth();
   const displayDonorName = currentUser?.organizationName || donorName;
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
   // Derive operational statistics from actual database records
   const activeDonationsCount = donations.filter(d => 
     ['POSTED', 'MATCHED', 'UNDER_REVIEW', 'ACCEPTED', 'PICKUP_ASSIGNED'].includes(d.status)
@@ -266,6 +268,22 @@ export default function DonorDashboard({
               >
                 <QrCode className="w-4 h-4" />
                 <span>Show Handover QR</span>
+              </button>
+              <button
+                onClick={() => setCameraModalOpen(true)}
+                className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all touch-target"
+              >
+                <Camera className="w-4 h-4 text-orange-400" />
+                <span>Camera Evidence</span>
+              </button>
+              <button
+                onClick={() => setTimelineOpen(!timelineOpen)}
+                className={`px-3 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-colors touch-target ${
+                  timelineOpen ? 'bg-orange-50 border-primary text-primary' : 'border-border hover:bg-gray-50 text-txt-secondary'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                <span>{timelineOpen ? 'Hide Timeline' : 'TrustChain Trail'}</span>
               </button>
               <a
                 href={createWhatsAppLink('+919823456789', getPickupArrivalMessage(currentPickupItem, 'Arjun Sharma (Van DL-3C-9821)', 18))}
@@ -540,6 +558,25 @@ export default function DonorDashboard({
           }}
         />
       </div>
+
+      {/* TrustChain Timeline Accordion */}
+      {timelineOpen && (
+        <div className="animate-fadeIn">
+          <TrustChainTimeline donationId={currentPickupItem?.id || 'list-001'} />
+        </div>
+      )}
+
+      {/* Camera Evidence Modal */}
+      <CameraEvidenceModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        mode="PICKUP"
+        donationId={currentPickupItem?.id || 'list-001'}
+        expectedServings={currentPickupItem?.quantity_servings || 180}
+        onEvidenceSubmitted={(evidence) => {
+          setCameraModalOpen(false);
+        }}
+      />
 
     </div>
   );
