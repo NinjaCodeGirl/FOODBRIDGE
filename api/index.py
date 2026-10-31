@@ -1,23 +1,35 @@
+"""
+FoodBridge API — Vercel Serverless Entry Point
+This file is served at /api by Vercel's Python runtime.
+api/[...path].py (same content) handles /api/* sub-paths.
+"""
 import sys
 import os
 import traceback
 
-# Ensure the api/ directory itself is on the path so `from app.xxx import` works
+# Resolve the api/ directory so `from app.xxx import` works regardless of CWD
 _api_dir = os.path.dirname(os.path.abspath(__file__))
 if _api_dir not in sys.path:
     sys.path.insert(0, _api_dir)
 
 try:
-    from app.main import app
-except Exception as _e:
+    from app.main import app  # noqa: F401  (Vercel picks up `app`)
+except Exception as _startup_error:
     from fastapi import FastAPI, Request
     from fastapi.responses import JSONResponse
     _tb = traceback.format_exc()
-    app = FastAPI(title="FoodBridge API (error mode)")
+    app = FastAPI(title="FoodBridge API — startup error")
 
     @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
-    async def catch_all(path: str, request: Request):
+    async def _error_handler(path: str, request: Request):
+        """Diagnostic endpoint — returns startup import error for debugging."""
         return JSONResponse(
             status_code=500,
-            content={"error": str(_e), "traceback": _tb, "path": path}
+            content={
+                "status": "startup_error",
+                "error": str(_startup_error),
+                "traceback": _tb,
+                "path": path,
+                "hint": "Check Vercel function logs → python import failed",
+            },
         )

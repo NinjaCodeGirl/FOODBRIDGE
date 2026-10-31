@@ -2,7 +2,6 @@ import os
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.routers import (
     auth,
@@ -29,7 +28,7 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS Configuration
+# CORS Configuration — allow all origins for the public redistribution platform
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -38,16 +37,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static File Storage for Verified Evidence Media (supports serverless /tmp)
+# Static File Storage for Verified Evidence Media
+# In serverless (Vercel), files in /tmp are ephemeral but writable
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if os.getenv("VERCEL") or not os.access(BASE_DIR, os.W_OK):
-    UPLOADS_DIR = os.path.join("/tmp", "uploads")
+IS_SERVERLESS = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+
+if IS_SERVERLESS:
+    UPLOADS_DIR = "/tmp/uploads"
 else:
     UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
-# Include API Routers
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+# Only mount static files when NOT in serverless (avoids startup failure if dir is empty)
+if not IS_SERVERLESS:
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+
+# Include all API routers
 app.include_router(auth.router)
 app.include_router(donations.router)
 app.include_router(ngo.router)
@@ -63,15 +70,32 @@ app.include_router(deliveries.router)
 app.include_router(notifications.router)
 app.include_router(escalation.router)
 
+
 @app.get("/", tags=["Health Check"])
 def root():
+    """Backend health check — confirms the API is running."""
     return {
         "status": "online",
         "app": settings.APP_NAME,
         "version": "2.0.0",
-        "architecture": "FastAPI + Gemini AI + Supabase + QR Verification Ledger + B2B SaaS Subscriptions + CSR Engine",
-        "documentation": "/docs"
+        "environment": "serverless" if IS_SERVERLESS else "local",
+        "documentation": "/docs",
+        "endpoints": [
+            "/api/auth/login",
+            "/api/donations/active",
+            "/api/analytics/impact",
+            "/api/evidence/upload",
+            "/api/ngo/matching",
+            "/api/qr/generate",
+        ]
     }
+
+
+@app.get("/api/health", tags=["Health Check"])
+def health():
+    """Live health probe."""
+    return {"status": "healthy", "version": "2.0.0"}
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=settings.PORT, reload=True)

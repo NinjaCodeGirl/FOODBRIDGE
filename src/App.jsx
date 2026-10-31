@@ -215,7 +215,8 @@ export default function App() {
     const fetchActiveListings = async () => {
       try {
         const res = await fetch(`${API_URL}/api/donations/active`);
-        if (res.ok) {
+        const ct = res.headers.get('content-type') || '';
+        if (res.ok && ct.includes('application/json')) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
             setListings(prev => {
@@ -232,7 +233,8 @@ export default function App() {
     const fetchMetrics = async () => {
       try {
         const res = await fetch(`${API_URL}/api/analytics/impact`);
-        if (res.ok) {
+        const ct2 = res.headers.get('content-type') || '';
+        if (res.ok && ct2.includes('application/json')) {
           const data = await res.json();
           setLiveMetrics(data);
         }
