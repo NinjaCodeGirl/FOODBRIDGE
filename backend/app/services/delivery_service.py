@@ -372,3 +372,4 @@ class DeliveryService:
             "message": f"Assignment released for reassignment due to: {reason}.",
             "delivery": delivery
         }
+

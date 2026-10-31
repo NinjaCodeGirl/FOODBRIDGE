@@ -1,9 +1,12 @@
 import io
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import unittest
 from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
 from app.main import app
+from app.routers.donations import SURPLUS_DB
 
 class TestFoodBridgePhases5to8(unittest.TestCase):
     """
@@ -18,6 +21,14 @@ class TestFoodBridgePhases5to8(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.client = TestClient(app)
+
+    def setUp(self):
+        # Reset list-001 stock before delivery tests
+        for item in SURPLUS_DB:
+            if item["id"] == "list-001":
+                item["quantity_servings"] = 180
+                item["reserved_servings"] = 0
+                item["status"] = "AVAILABLE"
 
     # ==========================================================================
     # PHASE 5: RAPID PICKUP, LIVE GPS, ETA COUNTDOWN & DELAY MANAGEMENT

@@ -661,4 +661,40 @@ class PlanPriceUpdateRequest(BaseModel):
     price_annual_inr: int
     features: Optional[List[str]] = None
 
+# ==============================================================================
+# 18. Automatic NGO Escalation & Food Reallocation Engine (Section 4)
+# ==============================================================================
+class NGOOfferResponse(BaseModel):
+    id: str
+    listing_id: str
+    food_title: str
+    donor_name: str
+    ngo_id: str
+    ngo_name: str
+    offered_servings: int
+    status: str = Field("OFFERED", description="OFFERED, ACCEPTED, REJECTED, EXPIRED, TIME_EXTENSION_REQUESTED, REALLOCATED")
+    offered_at: datetime
+    response_deadline: datetime
+    seconds_remaining: int
+    escalation_level: int = 1
+    accepted_servings: Optional[int] = None
+    rejection_reason: Optional[str] = None
+
+class OfferRespondRequest(BaseModel):
+    offer_id: str
+    action: str = Field(..., description="ACCEPT, REJECT, REQUEST_TIME")
+    accepted_servings: Optional[int] = None
+    rejection_reason: Optional[str] = None
+    extension_minutes: Optional[int] = 5
+
+class OfferRespondResponse(BaseModel):
+    success: bool
+    message: str
+    action_taken: str
+    offer: NGOOfferResponse
+    reallocated_to_next: bool = False
+    next_offer: Optional[NGOOfferResponse] = None
+    remaining_available_servings: int
+
+
 

@@ -209,3 +209,4 @@ Admin-only endpoint to update plan pricing proposals and features.
 
 ### `GET /api/revenue/metrics`
 Returns financial metrics (MRR, ARR, active paying partners, ARPU, churn) strictly isolated in INR, never conflated with food kg.
+

@@ -86,3 +86,4 @@ All personas share the standard development password: **`FoodBridge@2026!`**
    - Operates in verified sandbox/test mode with server-side HMAC cryptographic signature verification, preventing mock transactions from charging real credit cards before merchant onboarding.
 4. **Evidence Storage**:
    - Binary media uploads are persisted directly to static disk storage (`backend/uploads/`) with server-computed SHA-256 hashes, avoiding reliance on unconfigured third-party cloud buckets.
+

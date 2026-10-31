@@ -22,8 +22,12 @@ import {
   X,
   Share2,
   Compass,
-  AlertCircle
+  AlertCircle,
+  BarChart3,
+  Trophy
 } from 'lucide-react';
+import WeeklyActivitySection from '../common/WeeklyActivitySection';
+import UnifiedLeaderboardSection from '../common/UnifiedLeaderboardSection';
 import { createWhatsAppLink, WhatsAppLifecycle } from '../../utils/whatsapp';
 
 export default function VolunteerDashboard({
@@ -347,6 +351,30 @@ export default function VolunteerDashboard({
         >
           <CheckCircle2 className="w-4 h-4" />
           <span>Completed History ({completedAssignments.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('activity')}
+          className={`py-3 px-3 border-b-2 transition-all flex items-center gap-1.5 ${
+            activeTab === 'activity'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-txt-secondary hover:text-txt-primary'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          <span>Weekly Activity</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('leaderboard')}
+          className={`py-3 px-3 border-b-2 transition-all flex items-center gap-1.5 ${
+            activeTab === 'leaderboard'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-txt-secondary hover:text-txt-primary'
+          }`}
+        >
+          <Trophy className="w-4 h-4" />
+          <span>Courier Leaderboard</span>
         </button>
       </div>
 
@@ -690,6 +718,20 @@ export default function VolunteerDashboard({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* 4. TAB: WEEKLY ACTIVITY */}
+      {activeTab === 'activity' && (
+        <div className="space-y-6">
+          <WeeklyActivitySection role="VOLUNTEER" />
+        </div>
+      )}
+
+      {/* 5. TAB: COURIER LEADERBOARD */}
+      {activeTab === 'leaderboard' && (
+        <div className="space-y-6">
+          <UnifiedLeaderboardSection initialRole="VOLUNTEERS" />
         </div>
       )}
 

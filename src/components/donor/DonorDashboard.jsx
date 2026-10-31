@@ -9,6 +9,8 @@ import EmptyState from '../ui/EmptyState';
 import RestaurantMap from './RestaurantMap';
 import CameraEvidenceModal from '../evidence/CameraEvidenceModal';
 import TrustChainTimeline from '../timeline/TrustChainTimeline';
+import WeeklyActivitySection from '../common/WeeklyActivitySection';
+import UnifiedLeaderboardSection from '../common/UnifiedLeaderboardSection';
 import { 
   PlusCircle, 
   Clock, 
@@ -558,6 +560,12 @@ export default function DonorDashboard({
           }}
         />
       </div>
+
+      {/* 7. WEEKLY ACTIVITY & SALVAGE METRICS */}
+      <WeeklyActivitySection role="RESTAURANT" donations={donations} />
+
+      {/* 8. VERIFIED COMMUNITY LEADERBOARD */}
+      <UnifiedLeaderboardSection initialRole="RESTAURANTS" />
 
       {/* TrustChain Timeline Accordion */}
       {timelineOpen && (

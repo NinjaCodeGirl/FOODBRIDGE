@@ -10,6 +10,8 @@ import RecipientMap from './RecipientMap';
 import DistributionCentre from './DistributionCentre';
 import WitnessVerificationModal from '../witness/WitnessVerificationModal';
 import TrustChainTimeline from '../timeline/TrustChainTimeline';
+import WeeklyActivitySection from '../common/WeeklyActivitySection';
+import UnifiedLeaderboardSection from '../common/UnifiedLeaderboardSection';
 import { generateImpactCertificate } from '../../utils/pdfGenerator';
 import { 
   Search, 
@@ -30,7 +32,9 @@ import {
   Users,
   Leaf,
   Package,
-  History
+  History,
+  Sparkles,
+  Award
 } from 'lucide-react';
 import { createWhatsAppLink, getPickupArrivalMessage } from '../../utils/whatsapp';
 
@@ -80,6 +84,82 @@ export default function RecipientDashboard({
       requestedAt: new Date(Date.now() - 35 * 60 * 1000).toISOString()
     }
   ]);
+
+  // Active priority offers received via automatic escalation
+  const [priorityOffers, setPriorityOffers] = useState([
+    {
+      id: 'offer-101',
+      listing_id: 'list-001',
+      food_title: 'Fresh Cooked Dal Makhani & Rice',
+      donor_name: 'NSUT Campus Dining Hall',
+      offered_servings: 100,
+      status: 'OFFERED',
+      seconds_remaining: 280,
+      escalation_level: 1,
+      pickup_address: 'NSUT Main Campus, Sector 3, Dwarka, New Delhi'
+    }
+  ]);
+  const [partialServingsInput, setPartialServingsInput] = useState(60);
+
+  // Tick down offers countdown timer
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setPriorityOffers(prev => prev.map(o => {
+        if (o.status !== 'OFFERED') return o;
+        const next = o.seconds_remaining - 1;
+        if (next <= 0) {
+          return { ...o, status: 'EXPIRED', seconds_remaining: 0 };
+        }
+        return { ...o, seconds_remaining: next };
+      }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleRespondOffer = (offerId, action, servings = null) => {
+    const offer = priorityOffers.find(o => o.id === offerId);
+    if (!offer) return;
+
+    if (action === 'ACCEPT') {
+      const acceptedCount = servings || offer.offered_servings;
+      setPriorityOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'ACCEPTED', accepted_servings: acceptedCount } : o));
+      setMyRequests(prev => [
+        {
+          id: `req-${Date.now()}`,
+          listingId: offer.listing_id,
+          foodTitle: offer.food_title,
+          donorName: offer.donor_name,
+          donorPhone: '+91 98765 43210',
+          servings: acceptedCount,
+          status: 'ACCEPTED',
+          volunteerName: 'Dispatch Queue (Assigning...)',
+          volunteerPhone: '+91 1800 200 4567',
+          etaMins: 20,
+          requestedAt: new Date().toISOString()
+        },
+        ...prev
+      ]);
+      if (onShowToast) onShowToast(`Accepted ${acceptedCount} servings! Pickup assignment queued.`);
+    } else if (action === 'REJECT') {
+      setPriorityOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'REJECTED' } : o));
+      if (onShowToast) onShowToast('Offer declined. Automatically reallocated to next shelter partner.');
+    } else if (action === 'REQUEST_TIME') {
+      setPriorityOffers(prev => prev.map(o => o.id === offerId ? { ...o, seconds_remaining: o.seconds_remaining + 300, status: 'TIME_EXTENSION_REQUESTED' } : o));
+      if (onShowToast) onShowToast('Requested +5m extension. Kitchen supervisor notified.');
+    }
+
+    // Call backend API
+    fetch('/api/escalation/respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        offer_id: offerId,
+        action,
+        accepted_servings: servings,
+        extension_minutes: 5
+      })
+    }).catch(() => {});
+  };
 
   // Distribution records state
   const [distributions, setDistributions] = useState([
@@ -259,6 +339,30 @@ export default function RecipientDashboard({
         >
           <ShieldCheck className="w-4 h-4" />
           <span>TrustChain Timeline</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('offers')}
+          className={`py-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'offers'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-txt-secondary hover:text-txt-primary'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-primary" />
+          <span>Priority Offers ({priorityOffers.filter(o => o.status === 'OFFERED').length} Live)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('leaderboard')}
+          className={`py-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'leaderboard'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-txt-secondary hover:text-txt-primary'
+          }`}
+        >
+          <Award className="w-4 h-4" />
+          <span>Weekly Activity & Leaderboard</span>
         </button>
       </div>
 
@@ -601,6 +705,172 @@ export default function RecipientDashboard({
       {/* 10. TAB 6: TRUSTCHAIN TIMELINE */}
       {activeTab === 'trustchain' && (
         <TrustChainTimeline donationId="list-001" />
+      )}
+
+      {/* 11. TAB 7: PRIORITY OFFERS & ESCALATION COUNTDOWN */}
+      {activeTab === 'offers' && (
+        <div className="space-y-6">
+          <div className="fb-card p-6 bg-white border border-border space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
+              <div>
+                <h3 className="font-extrabold text-base text-navy flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <span>Incoming Priority Surplus Food Offers</span>
+                </h3>
+                <p className="text-xs text-txt-secondary mt-0.5">
+                  Surplus food offered directly to your shelter. Unaccepted offers automatically escalate to the next NGO after the response window.
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-orange-100 text-primary font-bold text-xs">
+                {priorityOffers.filter(o => o.status === 'OFFERED').length} Active Windows
+              </span>
+            </div>
+
+            {priorityOffers.length === 0 ? (
+              <div className="p-8 text-center text-txt-muted">
+                <Clock className="w-8 h-8 text-txt-muted/50 mx-auto mb-2" />
+                <p>No active priority offers right now. Check back when kitchens post fresh surplus.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {priorityOffers.map((o) => {
+                  const mins = Math.floor(o.seconds_remaining / 60);
+                  const secs = o.seconds_remaining % 60;
+                  const timeFormatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                  const isOffered = o.status === 'OFFERED';
+
+                  return (
+                    <div
+                      key={o.id}
+                      className={`p-5 rounded-2xl border transition-all ${
+                        isOffered 
+                          ? 'border-orange-200 bg-orange-50/40 shadow-sm' 
+                          : o.status === 'ACCEPTED'
+                          ? 'border-emerald-200 bg-emerald-50/40'
+                          : 'border-border bg-surface-subtle opacity-75'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-primary">
+                              Escalation Level {o.escalation_level} (Priority Match)
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${
+                              isOffered
+                                ? 'bg-orange-100 text-primary border-orange-200'
+                                : o.status === 'ACCEPTED'
+                                ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                : 'bg-gray-100 text-gray-700 border-gray-200'
+                            }`}>
+                              {o.status}
+                            </span>
+                          </div>
+                          <h4 className="text-base font-extrabold text-navy mt-1">{o.food_title}</h4>
+                          <span className="text-xs text-txt-secondary">
+                            Offered by <strong>{o.donor_name}</strong> • {o.pickup_address}
+                          </span>
+                        </div>
+
+                        {/* 5-Minute Response Countdown Box */}
+                        {isOffered && (
+                          <div className="bg-white border border-orange-200 px-4 py-2 rounded-xl text-center flex-shrink-0 shadow-sm">
+                            <span className="text-[10px] uppercase font-bold text-txt-muted block">Response Window</span>
+                            <span className={`font-mono text-xl font-extrabold ${o.seconds_remaining < 60 ? 'text-status-danger animate-pulse' : 'text-primary'}`}>
+                              {timeFormatted}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Offer Details */}
+                      <div className="py-3 flex flex-wrap items-center gap-4 text-xs font-semibold text-txt-secondary">
+                        <span>Total Offered: <strong className="text-navy">{o.offered_servings} Servings</strong></span>
+                        <span>•</span>
+                        <span>Safe Category: <strong className="text-emerald-700">Category A (Ambient)</strong></span>
+                        <span>•</span>
+                        <span>Automatic Escalation: <strong className="text-txt-primary">Next Nearby Shelter on Timeout</strong></span>
+                      </div>
+
+                      {/* Interactive Decision Actions */}
+                      {isOffered ? (
+                        <div className="pt-3 border-t border-border/80 flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Accept Full */}
+                            <button
+                              type="button"
+                              onClick={() => handleRespondOffer(o.id, 'ACCEPT')}
+                              className="px-4 py-2 rounded-xl bg-status-success hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 touch-target"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>Accept All ({o.offered_servings} Meals)</span>
+                            </button>
+
+                            {/* Partial Allocation Input */}
+                            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-border">
+                              <input
+                                type="number"
+                                min={10}
+                                max={o.offered_servings}
+                                value={partialServingsInput}
+                                onChange={(e) => setPartialServingsInput(Number(e.target.value))}
+                                className="w-16 px-2 py-1 text-xs font-bold text-center border-none focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRespondOffer(o.id, 'ACCEPT', partialServingsInput)}
+                                className="px-3 py-1 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold text-xs"
+                                title="Accept partial; remainder is automatically offered to next shelter"
+                              >
+                                Accept Partial
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {/* Request Time */}
+                            <button
+                              type="button"
+                              onClick={() => handleRespondOffer(o.id, 'REQUEST_TIME')}
+                              className="px-3 py-2 rounded-xl border border-border bg-white hover:bg-surface-subtle text-txt-secondary font-bold text-xs flex items-center gap-1"
+                            >
+                              <Clock className="w-3.5 h-3.5 text-status-warning" />
+                              <span>+5m Time Extension</span>
+                            </button>
+
+                            {/* Reject / Pass */}
+                            <button
+                              type="button"
+                              onClick={() => handleRespondOffer(o.id, 'REJECT')}
+                              className="px-3 py-2 rounded-xl border border-border bg-white hover:bg-red-50 text-status-danger font-bold text-xs"
+                            >
+                              Decline & Reallocate
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="pt-2 text-xs font-semibold text-txt-muted">
+                          {o.status === 'ACCEPTED' && `✓ Accepted ${o.accepted_servings || o.offered_servings} servings. Pickup assignment is queued.`}
+                          {o.status === 'EXPIRED' && 'Offer timed out without response. Reallocated to next eligible partner.'}
+                          {o.status === 'REJECTED' && 'Declined. Reallocated to next partner.'}
+                        </div>
+                      )}
+
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 12. TAB 8: WEEKLY ACTIVITY & LEADERBOARD */}
+      {activeTab === 'leaderboard' && (
+        <div className="space-y-6">
+          <WeeklyActivitySection role="NGO" />
+          <UnifiedLeaderboardSection initialRole="NGOS" />
+        </div>
       )}
 
       {/* MODALS */}

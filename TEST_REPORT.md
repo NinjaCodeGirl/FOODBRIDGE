@@ -97,3 +97,4 @@ The platform explicitly defends against 12 distinct attack vectors:
 $env:PYTHONPATH="backend"; & "C:\Users\yogit\AppData\Local\Python\pythoncore-3.14-64\python.exe" -m unittest discover -s backend/tests -p "test_*.py" -v
 ```
 Output: `Ran 40 tests in 1.950s - OK`
+

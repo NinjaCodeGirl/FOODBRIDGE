@@ -107,3 +107,4 @@ class NotificationService:
                     n["is_read"] = True
                     count += 1
         return count
+

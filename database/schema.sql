@@ -243,3 +243,87 @@ CREATE INDEX IF NOT EXISTS idx_dist_events_ngo ON public.distribution_events(ngo
 CREATE INDEX IF NOT EXISTS idx_timeline_donation ON public.trustchain_timeline_events(donation_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_evidence_hash ON public.evidence_uploads(file_hash);
 CREATE INDEX IF NOT EXISTS idx_reconciliation_donation ON public.quantity_reconciliation_ledger(donation_id);
+
+-- ============================================================================
+-- 13. NGO ESCALATION & FOOD REALLOCATION OFFERS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.ngo_offers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    listing_id VARCHAR(255) NOT NULL,
+    ngo_id VARCHAR(255) NOT NULL,
+    ngo_name VARCHAR(255) NOT NULL,
+    offered_servings INT NOT NULL,
+    status VARCHAR(50) CHECK (status IN (
+        'OFFERED',
+        'ACCEPTED',
+        'REJECTED',
+        'EXPIRED',
+        'TIME_EXTENSION_REQUESTED',
+        'REALLOCATED'
+    )) DEFAULT 'OFFERED',
+    offered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    response_deadline TIMESTAMP WITH TIME ZONE NOT NULL,
+    response_at TIMESTAMP WITH TIME ZONE,
+    accepted_servings INT,
+    rejection_reason TEXT,
+    escalation_level INT DEFAULT 1,
+    next_ngo_id VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- 14. CENTRAL NOTIFICATIONS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id VARCHAR(255),
+    role VARCHAR(50) NOT NULL,
+    event_type VARCHAR(100) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    action_url TEXT,
+    priority VARCHAR(50) DEFAULT 'NORMAL',
+    is_read BOOLEAN DEFAULT FALSE,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- 15. B2B SAAS SUBSCRIPTIONS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id VARCHAR(255) UNIQUE NOT NULL,
+    organization_name VARCHAR(255) NOT NULL,
+    plan_code VARCHAR(50) NOT NULL,
+    plan_name VARCHAR(100) NOT NULL,
+    billing_cycle VARCHAR(50) DEFAULT 'monthly',
+    status VARCHAR(50) DEFAULT 'ACTIVE',
+    current_period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+    current_period_end TIMESTAMP WITH TIME ZONE NOT NULL,
+    cancel_at_period_end BOOLEAN DEFAULT FALSE,
+    amount_inr INT NOT NULL,
+    entitlements JSONB DEFAULT '[]'::jsonb,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- 16. ADMINISTRATIVE AUDIT LOGS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    actor_id VARCHAR(255) NOT NULL,
+    actor_role VARCHAR(50) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(100) NOT NULL,
+    resource_id VARCHAR(255) NOT NULL,
+    details JSONB DEFAULT '{}'::jsonb,
+    ip_address VARCHAR(50),
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ngo_offers_listing ON public.ngo_offers(listing_id, status);
+CREATE INDEX IF NOT EXISTS idx_ngo_offers_ngo ON public.ngo_offers(ngo_id, status);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_role ON public.notifications(role, is_read);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON public.audit_logs(actor_id, timestamp DESC);
+

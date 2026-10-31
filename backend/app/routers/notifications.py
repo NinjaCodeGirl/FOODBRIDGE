@@ -62,3 +62,4 @@ def dispatch_system_notification(payload: NotificationDispatchCreate):
         user_id=payload.user_id,
         metadata=payload.metadata
     )
+

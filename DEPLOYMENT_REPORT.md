@@ -94,3 +94,4 @@ gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
 - [x] GPS proximity arrival verifies courier is within 250m before allowing dock arrival status.
 - [x] B2B SaaS payment webhooks enforce cryptographic signature verification.
 - [x] Financial revenue metrics (INR) strictly segregated from food quantity metrics (kg/servings).
+
