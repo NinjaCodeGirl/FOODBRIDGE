@@ -6,6 +6,11 @@ import StatusBadge from '../ui/StatusBadge';
 import LiveMap from '../LiveMap';
 import RequestFoodModal from './RequestFoodModal';
 import RecordDistributionModal from './RecordDistributionModal';
+import RecipientMap from './RecipientMap';
+import DistributionCentre from './DistributionCentre';
+import WitnessVerificationModal from '../witness/WitnessVerificationModal';
+import TrustChainTimeline from '../timeline/TrustChainTimeline';
+import { generateImpactCertificate } from '../../utils/pdfGenerator';
 import { 
   Search, 
   MapPin, 
@@ -23,7 +28,9 @@ import {
   ShieldCheck,
   Star,
   Users,
-  Leaf
+  Leaf,
+  Package,
+  History
 } from 'lucide-react';
 import { createWhatsAppLink, getPickupArrivalMessage } from '../../utils/whatsapp';
 
@@ -35,14 +42,27 @@ export default function RecipientDashboard({
   onOpenContact,
   onOpenRating,
   onTriggerSplit,
-  onShowToast
+  onShowToast,
+  externalTab = null
 }) {
-  const [activeTab, setActiveTab] = useState('browse'); // 'browse' | 'map' | 'requests' | 'distributions' | 'capacity'
-  const [radiusFilter, setRadiusFilter] = useState('ALL'); // 'ALL' | 3 | 5 | 10 | 25
+  const [activeTab, setActiveTab] = useState(externalTab || 'browse');
+
+  React.useEffect(() => {
+    if (externalTab) {
+      if (['browse', 'find-food'].includes(externalTab)) setActiveTab('browse');
+      else if (['map'].includes(externalTab)) setActiveTab('map');
+      else if (['requests'].includes(externalTab)) setActiveTab('requests');
+      else if (['distributions'].includes(externalTab)) setActiveTab('distributions');
+      else if (['distribution-centre'].includes(externalTab)) setActiveTab('distribution-centre');
+      else if (['trustchain'].includes(externalTab)) setActiveTab('trustchain');
+    }
+  }, [externalTab]);
+  const [radiusFilter, setRadiusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [selectedListingForRequest, setSelectedListingForRequest] = useState(null);
   const [selectedRequestForDistribution, setSelectedRequestForDistribution] = useState(null);
+  const [witnessModalEvent, setWitnessModalEvent] = useState(null);
 
   // NGO's active requests state
   const [myRequests, setMyRequests] = useState([
@@ -215,6 +235,30 @@ export default function RecipientDashboard({
         >
           <HeartHandshake className="w-4 h-4" />
           <span>Distribution Records ({distributions.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('distribution-centre')}
+          className={`py-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'distribution-centre'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-txt-secondary hover:text-txt-primary'
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          <span>Distribution Centre</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('trustchain')}
+          className={`py-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'trustchain'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-txt-secondary hover:text-txt-primary'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>TrustChain Timeline</span>
         </button>
       </div>
 
@@ -407,43 +451,20 @@ export default function RecipientDashboard({
         </div>
       )}
 
-      {/* 6. TAB 2: LIVE MAP WITH RADIUS SEARCH */}
+      {/* 6. TAB 2: SMART RECIPIENT MAP — Multi-tier radius, smart matching & OSRM routing */}
       {activeTab === 'map' && (
-        <div className="space-y-4">
-          <div className="fb-card p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="font-extrabold text-base text-navy font-display">Surplus Proximity & Transit Matrix</h3>
-              <p className="text-xs text-txt-secondary">Live geo-coordinates of commercial kitchens and recipient shelters across Delhi NCR</p>
-            </div>
-
-            {/* Radius Switcher on Map */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-txt-secondary">Radius:</span>
-              {[
-                { id: 'ALL', label: 'All' },
-                { id: 5, label: '5 km' },
-                { id: 10, label: '10 km' },
-                { id: 25, label: '25 km' },
-              ].map(r => (
-                <button
-                  key={r.id}
-                  onClick={() => setRadiusFilter(r.id)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                    radiusFilter === r.id ? 'bg-primary text-white' : 'bg-surface-subtle text-txt-secondary border border-border'
-                  }`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <LiveMap
-            listings={filteredListings}
-            onOpenContactModal={onOpenContact}
-            onTriggerSplit={onTriggerSplit}
-          />
-        </div>
+        <RecipientMap
+          ngoData={{
+            name: ngoUser?.organizationName || 'Akshaya Patra Foundation Shelter',
+            address: 'Dwarka Sector 10 Hub, New Delhi',
+            lat: ngoUser?.latitude || 28.5833,
+            lon: ngoUser?.longitude || 77.0500,
+            capacity: ngoUser?.capacityMeals || 500
+          }}
+          listings={listings}
+          onRequestFood={(item) => setSelectedListingForRequest(item)}
+          onOpenContact={onOpenContact}
+        />
       )}
 
       {/* 7. TAB 3: MY REQUESTS & TRANSIT COORDINATION */}
@@ -550,6 +571,85 @@ export default function RecipientDashboard({
         />
       )}
 
+      {/* 8. TAB 4: DISTRIBUTION AUDIT RECORDS */}
+      {activeTab === 'distributions' && (
+        <div className="space-y-6">
+          <div className="fb-card p-6 space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-border">
+              <div>
+                <h3 className="font-extrabold text-base text-navy">Verified Beneficiary Distribution Ledger</h3>
+                <p className="text-xs text-txt-secondary">Records of food actually consumed by end recipients</p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                {distributions.length} Audited Receipts
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {distributions.map((d) => (
+                <div key={d.id} className="p-4 rounded-xl border border-border bg-surface-subtle flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
+                  <div>
+                    <h5 className="font-extrabold text-navy text-sm">{d.foodTitle}</h5>
+                    <div className="text-txt-secondary mt-0.5">
+                      Served at <strong>{d.distributionCenter}</strong> • Witness: {d.witnessName}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-base font-extrabold text-status-success block">
+                      {d.servingsDistributed} Meals Distributed
+                    </span>
+                    <span className="text-[11px] text-txt-muted">{d.beneficiaryCount} Beneficiaries Fed</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. TAB 5: DISTRIBUTION CENTRE — Multi-session splitting & reconciliation */}
+      {activeTab === 'distribution-centre' && (
+        <DistributionCentre
+          onGeneratePDF={(evt, sess) => generateImpactCertificate(evt, sess, { name: ngoUser?.organizationName })}
+          onWitnessVerify={(evt) => setWitnessModalEvent(evt)}
+        />
+      )}
+
+      {/* 10. TAB 6: TRUSTCHAIN TIMELINE */}
+      {activeTab === 'trustchain' && (
+        <TrustChainTimeline donationId="list-001" />
+      )}
+
+      {/* MODALS */}
+      {selectedListingForRequest && (
+        <RequestFoodModal
+          listing={selectedListingForRequest}
+          onClose={() => setSelectedListingForRequest(null)}
+          onSubmitRequest={handleCreateRequest}
+        />
+      )}
+
+      {selectedRequestForDistribution && (
+        <RecordDistributionModal
+          requestItem={selectedRequestForDistribution}
+          onClose={() => setSelectedRequestForDistribution(null)}
+          onRecordSubmitted={handleRecordDistribution}
+        />
+      )}
+
+      {witnessModalEvent && (
+        <WitnessVerificationModal
+          isOpen={!!witnessModalEvent}
+          onClose={() => setWitnessModalEvent(null)}
+          event={witnessModalEvent}
+          onVerified={(data) => {
+            if (onShowToast) onShowToast('Independent witness attestation recorded on TrustChain ledger.');
+            setWitnessModalEvent(null);
+          }}
+        />
+      )}
+
     </div>
   );
 }
+

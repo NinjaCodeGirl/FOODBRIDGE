@@ -132,3 +132,108 @@ CREATE INDEX IF NOT EXISTS idx_call_logs_listing ON public.call_logs(listing_id)
 INSERT INTO public.impact_logs (total_meals_rescued, total_co2_avoided_kg, total_food_saved_tonnes, active_ngo_partners, verified_pickups_count)
 VALUES (15420, 38550.00, 4.62, 54, 3210)
 ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- PHASES 3 & 4 & DISTRIBUTION PROOF EXTENSIONS
+-- ============================================================================
+
+-- 9. BENEFICIARY DISTRIBUTION EVENTS TABLE
+CREATE TABLE IF NOT EXISTS public.distribution_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_code VARCHAR(64) UNIQUE NOT NULL,
+    donation_id VARCHAR(255) NOT NULL,
+    ngo_id VARCHAR(255) NOT NULL,
+    ngo_name VARCHAR(255) NOT NULL,
+    food_category VARCHAR(100) NOT NULL,
+    quantity_received INT NOT NULL,
+    servings_distributed INT NOT NULL DEFAULT 0,
+    servings_remaining INT NOT NULL DEFAULT 0,
+    servings_spoiled INT NOT NULL DEFAULT 0,
+    servings_rejected INT NOT NULL DEFAULT 0,
+    beneficiary_count INT DEFAULT 0,
+    distribution_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    planned_location TEXT,
+    actual_location TEXT NOT NULL,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    session_number INT DEFAULT 1,
+    evidence_hashes JSONB DEFAULT '[]'::jsonb,
+    witness_name VARCHAR(255),
+    witness_phone VARCHAR(50),
+    witness_organization VARCHAR(255),
+    witness_confirmed BOOLEAN DEFAULT FALSE,
+    witness_notes TEXT,
+    witness_verified_at TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(50) CHECK (status IN ('PLANNED', 'IN_PROGRESS', 'DISTRIBUTED', 'VERIFIED', 'FLAGGED', 'REJECTED')) DEFAULT 'PLANNED',
+    audit_status VARCHAR(50) CHECK (audit_status IN ('PENDING_AUDIT', 'SYSTEM_CHECKS_PASSED', 'INDEPENDENTLY_VERIFIED', 'ADMIN_AUDITED', 'DISPUTED', 'REJECTED')) DEFAULT 'PENDING_AUDIT',
+    admin_audit_notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. TRUSTCHAIN TIMELINE AUDIT EVENTS TABLE (Append-Only Ledger)
+CREATE TABLE IF NOT EXISTS public.trustchain_timeline_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    donation_id VARCHAR(255) NOT NULL,
+    stage VARCHAR(50) CHECK (stage IN (
+        'FOOD_LISTED',
+        'FOOD_CLAIMED',
+        'VOLUNTEER_ASSIGNED',
+        'PICKUP_CONFIRMED',
+        'IN_TRANSIT',
+        'NGO_HANDOVER',
+        'RECIPIENT_CONFIRMED',
+        'DISTRIBUTION_RECORDED',
+        'DONATION_CLOSED'
+    )) NOT NULL,
+    actor_id VARCHAR(255) NOT NULL,
+    actor_name VARCHAR(255) NOT NULL,
+    actor_role VARCHAR(50) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    location_address TEXT,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    evidence_reference TEXT,
+    evidence_hash VARCHAR(64),
+    verification_status VARCHAR(50) DEFAULT 'VERIFIED',
+    event_signature VARCHAR(128),
+    notes TEXT
+);
+
+-- 11. MEDIA & EVIDENCE UPLOADS (PHOTO / VIDEO / DOC HASH LEDGER)
+CREATE TABLE IF NOT EXISTS public.evidence_uploads (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id VARCHAR(255),
+    donation_id VARCHAR(255) NOT NULL,
+    evidence_type VARCHAR(50) CHECK (evidence_type IN ('PICKUP_PHOTO', 'PICKUP_VIDEO', 'DELIVERY_PHOTO', 'DELIVERY_VIDEO', 'DISTRIBUTION_MEAL_PHOTO', 'DISTRIBUTION_SERVING_PHOTO', 'SUPPORTING_DOC')) NOT NULL,
+    file_hash VARCHAR(64) NOT NULL,
+    file_url TEXT NOT NULL,
+    uploader_id VARCHAR(255) NOT NULL,
+    uploader_role VARCHAR(50) NOT NULL,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    is_duplicate_flagged BOOLEAN DEFAULT FALSE,
+    captured_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 12. IMMUTABLE QUANTITY RECONCILIATION LEDGER
+-- Formula: Total Received = Distributed + Remaining + Spoiled + Rejected + Other Adjustments
+CREATE TABLE IF NOT EXISTS public.quantity_reconciliation_ledger (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    donation_id VARCHAR(255) NOT NULL,
+    ngo_id VARCHAR(255) NOT NULL,
+    transaction_type VARCHAR(50) CHECK (transaction_type IN ('INITIAL_RECEIPT', 'DISTRIBUTION_SESSION', 'SPOILAGE_ADJUSTMENT', 'REJECTION_ADJUSTMENT', 'TRANSFER')) NOT NULL,
+    quantity_servings INT NOT NULL,
+    balance_servings INT NOT NULL,
+    reason TEXT NOT NULL,
+    authorized_by VARCHAR(255) NOT NULL,
+    evidence_hash VARCHAR(64),
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- EXTENDED INDEXES
+CREATE INDEX IF NOT EXISTS idx_dist_events_donation ON public.distribution_events(donation_id);
+CREATE INDEX IF NOT EXISTS idx_dist_events_ngo ON public.distribution_events(ngo_id);
+CREATE INDEX IF NOT EXISTS idx_timeline_donation ON public.trustchain_timeline_events(donation_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_evidence_hash ON public.evidence_uploads(file_hash);
+CREATE INDEX IF NOT EXISTS idx_reconciliation_donation ON public.quantity_reconciliation_ledger(donation_id);

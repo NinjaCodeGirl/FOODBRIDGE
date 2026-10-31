@@ -557,6 +557,7 @@ export default function App() {
         <RecipientDashboard
           ngoUser={currentUser}
           listings={listings}
+          externalTab={activeTab}
           onRequestFood={(req) => {
             showToast(`Food requested: ${req.requestedServings} servings reserved!`);
           }}
@@ -583,6 +584,7 @@ export default function App() {
           metrics={liveMetrics}
           listings={listings}
           accounts={accounts}
+          externalTab={activeTab}
           onShowToast={showToast}
         />
       )}

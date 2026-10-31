@@ -58,7 +58,8 @@ export default function Sidebar({
           { id: 'find-food', label: 'Browse Surplus Food', icon: Search, isHighlight: true },
           { id: 'map', label: 'Nearby Food Map', icon: MapPin },
           { id: 'requests', label: 'My Claims & Requests', icon: BookmarkCheck },
-          { id: 'pickups', label: 'Incoming Transit', icon: Truck },
+          { id: 'distribution-centre', label: 'Distribution Centre', icon: Package },
+          { id: 'trustchain', label: 'TrustChain Timeline', icon: ShieldCheck },
           { id: 'distributions', label: 'Distribution Records', icon: HeartHandshake },
           { id: 'compliance', label: 'Safety & Audit', icon: ShieldCheck },
           { id: 'pricing', label: 'Pricing (Free NGO)', icon: Tag },
@@ -80,7 +81,8 @@ export default function Sidebar({
       default:
         return [
           { id: 'overview', label: 'Platform Overview', icon: LayoutDashboard },
-          { id: 'revenue', label: 'B2B SaaS Revenue', icon: TrendingUp, isHighlight: true },
+          { id: 'distribution-audit', label: 'Distribution Audit', icon: ShieldCheck, isHighlight: true },
+          { id: 'revenue', label: 'B2B SaaS Revenue', icon: TrendingUp },
           { id: 'unit-economics', label: 'Unit Economics', icon: PieChart },
           { id: 'compliance', label: 'FSSAI Regulatory Ledger', icon: ShieldCheck },
           { id: 'donations', label: 'All Surplus Flow', icon: Package },

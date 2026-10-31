@@ -3,6 +3,7 @@ import PageHeader from '../ui/PageHeader';
 import StatCard from '../ui/StatCard';
 import UrgencyBanner from '../ui/UrgencyBanner';
 import StatusBadge from '../ui/StatusBadge';
+import CameraEvidenceModal from '../evidence/CameraEvidenceModal';
 import { 
   Truck, 
   MapPin, 
@@ -31,6 +32,8 @@ export default function VolunteerDashboard({
   const [delayMins, setDelayMins] = useState(15);
   const [delayReason, setDelayReason] = useState('Heavy traffic near Ring Road Flyover');
   const [cameraEvidenceTaken, setCameraEvidenceTaken] = useState(false);
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [cameraEvidenceData, setCameraEvidenceData] = useState(null);
   const [otpCode, setOtpCode] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
 
@@ -340,15 +343,15 @@ export default function VolunteerDashboard({
                     <div className="flex items-center justify-between text-xs">
                       <button
                         type="button"
-                        onClick={() => setCameraEvidenceTaken(!cameraEvidenceTaken)}
+                        onClick={() => setCameraModalOpen(true)}
                         className={`px-3 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
-                          cameraEvidenceTaken
+                          cameraEvidenceData
                             ? 'bg-emerald-600 text-white border-emerald-600'
                             : 'bg-white border-border text-txt-secondary hover:text-txt-primary'
                         }`}
                       >
                         <Camera className="w-4 h-4" />
-                        <span>{cameraEvidenceTaken ? '✓ Loading Dock Photo Saved' : 'Snap Handover Photo'}</span>
+                        <span>{cameraEvidenceData ? `✓ SHA-256 Signed (${cameraEvidenceData.evidenceHash.slice(0, 8)}...)` : 'Capture Camera Evidence'}</span>
                       </button>
 
                       <button
@@ -543,6 +546,21 @@ export default function VolunteerDashboard({
         </div>
       )}
 
+      {/* Camera Evidence Capture Modal */}
+      <CameraEvidenceModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        mode={activePickup?.status === 'COLLECTED' ? 'DELIVERY' : 'PICKUP'}
+        donationId={activePickup?.id || 'assign-401'}
+        expectedServings={activePickup?.servings || 150}
+        onEvidenceSubmitted={(data) => {
+          setCameraEvidenceData(data);
+          setCameraEvidenceTaken(true);
+          if (onShowToast) onShowToast(`Evidence captured! SHA-256: ${data.evidenceHash.slice(0, 12)}... logged.`);
+        }}
+      />
+
     </div>
   );
 }
+

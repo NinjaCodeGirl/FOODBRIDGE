@@ -5,6 +5,7 @@ import StatusBadge from '../ui/StatusBadge';
 import AdminRevenueDashboard from '../revenue/AdminRevenueDashboard';
 import UnitEconomicsDashboard from '../revenue/UnitEconomicsDashboard';
 import ComplianceRecords from '../compliance/ComplianceRecords';
+import DistributionAuditDashboard from './DistributionAuditDashboard';
 import { 
   ShieldCheck, 
   Users, 
@@ -19,16 +20,30 @@ import {
   Lock,
   ArrowRight,
   Utensils,
-  CreditCard
+  CreditCard,
+  ClipboardCheck
 } from 'lucide-react';
 
 export default function AdminDashboard({
   metrics,
   listings = [],
   accounts = [],
-  onShowToast
+  onShowToast,
+  externalTab = null
 }) {
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'verifications' | 'revenue' | 'unit-economics' | 'compliance' | 'fraud'
+  const [activeTab, setActiveTab] = useState(externalTab || 'overview');
+
+  React.useEffect(() => {
+    if (externalTab) {
+      if (['overview'].includes(externalTab)) setActiveTab('overview');
+      else if (['verifications'].includes(externalTab)) setActiveTab('verifications');
+      else if (['revenue'].includes(externalTab)) setActiveTab('revenue');
+      else if (['unit-economics'].includes(externalTab)) setActiveTab('unit-economics');
+      else if (['compliance'].includes(externalTab)) setActiveTab('compliance');
+      else if (['fraud'].includes(externalTab)) setActiveTab('fraud');
+      else if (['distribution-audit'].includes(externalTab)) setActiveTab('distribution-audit');
+    }
+  }, [externalTab]);
   
   // Pending verification queue
   const [pendingVerifications, setPendingVerifications] = useState([
@@ -81,7 +96,8 @@ export default function AdminDashboard({
           { id: 'revenue', label: 'B2B SaaS Revenue', icon: TrendingUp },
           { id: 'unit-economics', label: 'Unit Economics Simulator', icon: PieChart },
           { id: 'compliance', label: 'FSSAI Regulatory Ledger', icon: FileText },
-          { id: 'fraud', label: 'Safety & Fraud Monitor', icon: AlertTriangle }
+          { id: 'fraud', label: 'Safety & Fraud Monitor', icon: AlertTriangle },
+          { id: 'distribution-audit', label: 'Distribution Audit', icon: ClipboardCheck }
         ].map(t => (
           <button
             key={t.id}
@@ -251,6 +267,12 @@ export default function AdminDashboard({
         </div>
       )}
 
+      {/* 6. DISTRIBUTION AUDIT TAB */}
+      {activeTab === 'distribution-audit' && (
+        <DistributionAuditDashboard />
+      )}
+
     </div>
   );
 }
+

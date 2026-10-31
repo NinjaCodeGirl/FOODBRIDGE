@@ -45,3 +45,4 @@ Donation *${donation.food_title}* (${servings} servings) successfully transferre
 🌱 *Environmental Impact:* ${co2Kg} kg CO₂ mitigated from landfill.
 Thank you for fighting food waste with FoodBridge!`;
 }
+

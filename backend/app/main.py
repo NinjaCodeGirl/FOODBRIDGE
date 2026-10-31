@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import donations, ngo, qr, analytics, calls, ratings, subscriptions, revenue
+from app.routers import donations, ngo, qr, analytics, calls, ratings, subscriptions, revenue, distribution
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -30,6 +30,7 @@ app.include_router(calls.router)
 app.include_router(ratings.router)
 app.include_router(subscriptions.router)
 app.include_router(revenue.router)
+app.include_router(distribution.router)
 
 @app.get("/", tags=["Health Check"])
 def root():

@@ -1,24 +1,24 @@
 import React, { useEffect } from 'react';
-import { 
-  X, 
-  Utensils, 
-  LayoutDashboard, 
-  Package, 
-  PlusCircle, 
-  Truck, 
-  BarChart3, 
-  Bell, 
-  Settings, 
-  Search, 
-  BookmarkCheck, 
-  Layers, 
-  History, 
-  User, 
-  HelpCircle, 
-  ShieldCheck, 
-  CreditCard, 
-  TrendingUp, 
-  PieChart, 
+import {
+  X,
+  Utensils,
+  LayoutDashboard,
+  Package,
+  PlusCircle,
+  Truck,
+  BarChart3,
+  Bell,
+  Settings,
+  Search,
+  BookmarkCheck,
+  Layers,
+  History,
+  User,
+  HelpCircle,
+  ShieldCheck,
+  CreditCard,
+  TrendingUp,
+  PieChart,
   Tag,
   MapPin,
   HeartHandshake
@@ -72,7 +72,8 @@ export default function ResponsiveDrawer({
           { id: 'find-food', label: 'Browse Surplus Food', icon: Search, isHighlight: true },
           { id: 'map', label: 'Nearby Map', icon: MapPin },
           { id: 'requests', label: 'My Requests', icon: BookmarkCheck },
-          { id: 'pickups', label: 'Incoming Transit', icon: Truck },
+          { id: 'distribution-centre', label: 'Distribution Centre', icon: Package },
+          { id: 'trustchain', label: 'TrustChain Timeline', icon: ShieldCheck },
           { id: 'distributions', label: 'Distribution Records', icon: HeartHandshake },
           { id: 'compliance', label: 'Safety & Audit', icon: ShieldCheck },
           { id: 'pricing', label: 'Pricing (Free NGO)', icon: Tag },
@@ -91,7 +92,8 @@ export default function ResponsiveDrawer({
       default:
         return [
           { id: 'overview', label: 'Platform Overview', icon: LayoutDashboard },
-          { id: 'revenue', label: 'B2B SaaS Revenue', icon: TrendingUp, isHighlight: true },
+          { id: 'distribution-audit', label: 'Distribution Audit', icon: ShieldCheck, isHighlight: true },
+          { id: 'revenue', label: 'B2B SaaS Revenue', icon: TrendingUp },
           { id: 'unit-economics', label: 'Unit Economics', icon: PieChart },
           { id: 'compliance', label: 'FSSAI Regulatory Ledger', icon: ShieldCheck },
           { id: 'donations', label: 'All Surplus Flow', icon: Package },
@@ -106,15 +108,15 @@ export default function ResponsiveDrawer({
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-navy-dark/75 backdrop-blur-sm transition-opacity" 
+      <div
+        className="fixed inset-0 bg-navy-dark/75 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Drawer Container */}
       <div className="fixed inset-y-0 left-0 max-w-xs w-full bg-white shadow-2xl flex flex-col justify-between z-10 animate-fadeIn">
-        
+
         {/* Top Header */}
         <div className="p-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -161,13 +163,12 @@ export default function ResponsiveDrawer({
                   setActiveTab(item.id);
                   onClose();
                 }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all touch-target ${
-                  isActive
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all touch-target ${isActive
                     ? 'bg-primary text-white shadow-orange'
                     : item.isHighlight
-                    ? 'bg-orange-50 text-primary border border-orange-200'
-                    : 'text-txt-secondary hover:text-navy hover:bg-surface-subtle'
-                }`}
+                      ? 'bg-orange-50 text-primary border border-orange-200'
+                      : 'text-txt-secondary hover:text-navy hover:bg-surface-subtle'
+                  }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.isHighlight ? 'text-primary' : 'text-txt-muted'}`} />
                 <span>{item.label}</span>

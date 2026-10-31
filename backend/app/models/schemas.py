@@ -346,3 +346,147 @@ class ComplianceAuditRecord(BaseModel):
     temperature_complied: bool
     incident_logged: bool = False
     disclaimer: str = "Operational compliance log for food safety traceability. Not valid for Section 80G income-tax deduction."
+
+# ==============================================================================
+# 13. Phase 3 & 4 Distribution Proof, TrustChain & Geo-Radius Schemas
+# ==============================================================================
+
+class LocationUpdateRequest(BaseModel):
+    user_id: str
+    organization_name: str
+    role: str
+    address: str
+    latitude: float
+    longitude: float
+    service_radius_km: Optional[float] = 10.0
+
+class LocationUpdateResponse(BaseModel):
+    success: bool
+    message: str
+    latitude: float
+    longitude: float
+
+class GeoRadiusSearchRequest(BaseModel):
+    origin_lat: float
+    origin_lon: float
+    radius_km: float = 10.0
+    food_category: Optional[str] = None
+    dietary_type: Optional[str] = None
+    min_servings: Optional[int] = None
+    max_urgency_hours: Optional[float] = None
+
+class TrustChainEventCreate(BaseModel):
+    donation_id: str
+    stage: str
+    actor_id: str
+    actor_name: str
+    actor_role: str
+    location_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    evidence_reference: Optional[str] = None
+    evidence_hash: Optional[str] = None
+    notes: Optional[str] = None
+
+class TrustChainEventResponse(BaseModel):
+    id: str
+    donation_id: str
+    stage: str
+    actor_id: str
+    actor_name: str
+    actor_role: str
+    timestamp: datetime
+    location_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    evidence_reference: Optional[str] = None
+    evidence_hash: Optional[str] = None
+    verification_status: str = "VERIFIED"
+    notes: Optional[str] = None
+
+class DistributionEventCreate(BaseModel):
+    donation_id: str
+    ngo_id: str
+    ngo_name: str
+    food_category: str
+    quantity_received: int
+    planned_location: str
+    actual_location: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+class DistributionSessionRecord(BaseModel):
+    event_id: str
+    servings_distributed: int
+    beneficiary_count: int
+    servings_remaining: int
+    servings_spoiled: Optional[int] = 0
+    servings_rejected: Optional[int] = 0
+    actual_location: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    evidence_hashes: Optional[List[str]] = []
+    notes: Optional[str] = None
+
+class WitnessVerifyRequest(BaseModel):
+    event_id: str
+    witness_name: str
+    witness_phone: str
+    witness_organization: str
+    witness_confirmed: bool
+    observed_quantity: Optional[int] = None
+    discrepancy_flagged: Optional[bool] = False
+    witness_notes: Optional[str] = None
+
+class AdminAuditRequest(BaseModel):
+    event_id: str
+    audit_decision: str = Field(..., description="VERIFIED, DISPUTED, REJECTED, ADDITIONAL_EVIDENCE_REQUESTED")
+    admin_notes: str
+    admin_id: str = "admin_governance"
+
+class DistributionEventResponse(BaseModel):
+    id: str
+    event_code: str
+    donation_id: str
+    ngo_id: str
+    ngo_name: str
+    food_category: str
+    quantity_received: int
+    servings_distributed: int
+    servings_remaining: int
+    servings_spoiled: int
+    servings_rejected: int
+    beneficiary_count: int
+    distribution_date: datetime
+    actual_location: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    evidence_hashes: List[str] = []
+    witness_name: Optional[str] = None
+    witness_confirmed: bool = False
+    witness_notes: Optional[str] = None
+    witness_verified_at: Optional[datetime] = None
+    status: str
+    audit_status: str
+    admin_audit_notes: Optional[str] = None
+    created_at: datetime
+
+class QuantityLedgerItem(BaseModel):
+    id: str
+    donation_id: str
+    transaction_type: str
+    quantity_servings: int
+    balance_servings: int
+    reason: str
+    authorized_by: str
+    timestamp: datetime
+
+class DistributionAuditSummaryResponse(BaseModel):
+    total_donations_received: int
+    total_food_distributed_servings: int
+    total_beneficiaries_served: int
+    independently_verified_events_count: int
+    pending_audit_events_count: int
+    flagged_discrepancies_count: int
+    unreconciled_inventory_servings: int
+

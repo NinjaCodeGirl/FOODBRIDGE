@@ -6,6 +6,9 @@ import DonationTable from '../ui/DonationTable';
 import StatusBadge from '../ui/StatusBadge';
 import Timeline from '../ui/Timeline';
 import EmptyState from '../ui/EmptyState';
+import RestaurantMap from './RestaurantMap';
+import CameraEvidenceModal from '../evidence/CameraEvidenceModal';
+import TrustChainTimeline from '../timeline/TrustChainTimeline';
 import { 
   PlusCircle, 
   Clock, 
@@ -26,7 +29,9 @@ import {
   Calendar,
   Sparkles,
   ExternalLink,
-  Share2
+  Share2,
+  Camera,
+  Map
 } from 'lucide-react';
 import { createWhatsAppLink, getPickupArrivalMessage } from '../../utils/whatsapp';
 import { useAuth } from '../../context/AuthContext';
@@ -511,6 +516,29 @@ export default function DonorDashboard({
           </div>
         </div>
 
+      </div>
+
+      {/* RESTAURANT MAP SECTION */}
+      <div className="fb-card p-5 bg-white border border-border shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Map className="w-4 h-4 text-primary" />
+            <h3 className="font-extrabold text-navy text-base">Dispatch Command Map</h3>
+          </div>
+          <span className="text-xs text-txt-muted">Live outbound delivery corridor to nearby NGO shelters</span>
+        </div>
+        <RestaurantMap
+          restaurantData={{
+            name: displayDonorName,
+            address: currentUser?.address || 'NSUT Campus, Sector 3, Dwarka, New Delhi',
+            lat: currentUser?.latitude || 28.6100,
+            lon: currentUser?.longitude || 77.0380,
+            fssai: currentUser?.fssaiLicense || '10019011000452'
+          }}
+          onAssignPickup={(ngo) => {
+            if (onOpenContact) onOpenContact({ phone: ngo.contact, name: ngo.contactPerson });
+          }}
+        />
       </div>
 
     </div>

@@ -48,7 +48,7 @@ export default function RatingModal({ listing, onClose, API_URL, onRatingSubmitt
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-dark/75 backdrop-blur-sm animate-fadeIn">
       <div className="fb-card w-full max-w-lg rounded-2xl p-6 sm:p-7 bg-white shadow-2xl relative space-y-5 border border-border">
-        
+
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -86,7 +86,7 @@ export default function RatingModal({ listing, onClose, API_URL, onRatingSubmitt
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 text-xs sm:text-sm">
-            
+
             {/* Overall Rating Stars */}
             <div className="p-4 rounded-xl bg-surface-subtle border border-border space-y-2 text-center">
               <span className="font-bold text-navy block text-xs">Overall Experience Rating</span>
@@ -99,9 +99,8 @@ export default function RatingModal({ listing, onClose, API_URL, onRatingSubmitt
                     className="p-1 text-2xl transition-transform hover:scale-110 focus:outline-none"
                   >
                     <Star
-                      className={`w-7 h-7 ${
-                        star <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'
-                      }`}
+                      className={`w-7 h-7 ${star <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'
+                        }`}
                     />
                   </button>
                 ))}
